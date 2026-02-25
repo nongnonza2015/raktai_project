@@ -93,17 +93,17 @@ if camera_photo is not None:
 
     rgb_result = balanced_rgb
     
-display_img = img_array.copy()
+    display_img = img_array.copy()
     
     # 1. กล่องสีเขียว (ช่องโปรตีน): ตรงกลางเป๊ะ
     # วาดสี่เหลี่ยมรอบจุด (cy, cx)
-    cv2_rect_p = [(cx-20, cy-20), (cx+20, cy+20)] 
+    cv2.rectangle(display_img, (cx-20, cy-20), (cx+20, cy+20), (0, 255, 0), 2)
     
     # 2. กล่องสีขาว (จุดอ้างอิงแสง): ขยับไปทางขวา
-    cv2_rect_w = [(cx+40, cy-20), (cx+60, cy+20)]
+    cv2.rectangle(display_img, (cx+40, cy-20), (cx+60, cy+20), (255, 255, 255), 2)
 
-    # แสดงผลเปรียบเทียบใน UI
-    st.write("### 🎯 ตรวจสอบตำแหน่งการวางแผ่นตรวจ")
+    # แสดงผลเปรียบเทียบใน UI พร้อมรูปที่ถูกวาดกรอบ
+    st.write("### 🎯 ตรวจสอบตำแหน่งการวางแผ่นตรวจ"); st.image(display_img)
     
     # ใช้สัญลักษณ์วาดกล่องแบบง่ายๆ ด้วย CSS หรือจะโชว์รูปที่ตัดมาก็ได้
     col_img1, col_img2 = st.columns(2)
@@ -298,7 +298,7 @@ if os.path.exists("ckd_database.csv"):
         st.dataframe(df)
         
     st.subheader("📈 แผนภูมิผู้ที่มีความเสี่ยงสูง (แบ่งตามอำเภอ)")
-    risk_df = df[df["ผลการประเมิน"].isin(["ความเสี่ยงสูง", "ความเสี่ยงปานกลาง"])]
+    risk_df = df[df["ผลการประเมิน"].isin(["ความเสี่ยงสูงมาก", "ความเสี่ยงปานกลาง"])]
     
     if not risk_df.empty:
         district_counts = risk_df["อำเภอ"].value_counts()
@@ -311,4 +311,3 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
-

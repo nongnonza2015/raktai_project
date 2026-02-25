@@ -138,20 +138,6 @@ if camera_photo is not None:
 
     result_text = "ปกติ" 
 
-    st.subheader("ผลการประเมิน:")
-    if risk_score >= 5:
-        result_text = "ความเสี่ยงสูง"
-        st.error("🔴 **ความเสี่ยงสูงมาก (High Risk):** พบสัญญาณโปรตีนรั่วและมีปัจจัยเสี่ยงร่วม แนะนำให้ไปพบแพทย์เพื่อตรวจค่าไต (eGFR) ที่โรงพยาบาลโดยเร็ว!")
-    elif risk_score >= 3:
-        result_text = "ความเสี่ยงปานกลาง"
-        st.warning("🟡 **ความเสี่ยงปานกลาง (Moderate Risk):** ไตอาจเริ่มทำงานหนัก ควรปรับพฤติกรรม ดื่มน้ำมากๆ ลดเค็ม/ลดยาแก้ปวด และตรวจซ้ำใน 1-2 สัปดาห์")
-    else:
-        result_text = "ปกติ"
-        st.success("🟢 **ความเสี่ยงต่ำ (Low Risk):** ปกติดี! รักษาสุขภาพต่อไปและตรวจเช็คปีละครั้ง")
-        
-    st.markdown("---")
-    st.caption("💡 หมายเหตุ: แอปพลิเคชันนี้เป็นเพียงเครื่องมือคัดกรองเบื้องต้น ไม่สามารถใช้แทนการวินิจฉัยของแพทย์ได้")
-
     # ==========================================
     # ส่วนที่ 5: บันทึกข้อมูล
     # ==========================================
@@ -161,6 +147,7 @@ if camera_photo is not None:
     if st.button("📥 บันทึกผลการคัดกรองเคสนี้"):
         with st.spinner("กำลังส่งข้อมูล..."):
             try:
+                # 1. บันทึกลง Local CSV
                 new_data = pd.DataFrame([{
                     "วันที่ตรวจ": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "อำเภอ": district,
@@ -179,22 +166,22 @@ if camera_photo is not None:
                 else:
                     new_data.to_csv("ckd_database.csv", index=False)
 
+                # 2. เตรียมข้อมูลส่งไป Google Forms (ต้องอยู่ภายใน try บล็อกเดียวกัน)
+                FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdmHo3tH30h7iOe0ckfoktY6aPk_R7eTAbunYy0dbqXNOWPoQ/formResponse"
                 
-        FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdmHo3tH30h7iOe0ckfoktY6aPk_R7eTAbunYy0dbqXNOWPoQ/formResponse"
+                form_data = {
+                    "entry.226071067": district,
+                    "entry.1224620038": age, 
+                    "entry.1030234450": gender,
+                    "entry.853278913": "เป็น" if has_diabetes else "ไม่เป็น",
+                    "entry.1930442439": "เป็น" if has_hypertension else "ไม่เป็น",
+                    "entry.853069744": nsaids_usage,
+                    "entry.643930526": matched_result,
+                    "entry.19531897": risk_score, 
+                    "entry.1594709429": result_text
+                }
                 
-        form_data = {
-            "entry.226071067": district,
-            "entry.1224620038": age, 
-            "entry.1030234450": gender,
-            "entry.853278913": "เป็น" if has_diabetes else "ไม่เป็น",
-            "entry.1930442439": "เป็น" if has_hypertension else "ไม่เป็น",
-            "entry.853069744": nsaids_usage,
-            "entry.643930526": matched_result,
-            "entry.19531897": risk_score, 
-            "entry.1594709429": result_text
-        }
-        
-        response = requests.post(FORM_URL, data=form_data)
+                response = requests.post(FORM_URL, data=form_data)
                 
                 if response.status_code == 200:
                     st.success("✅ บันทึกข้อมูลขึ้น Google Sheets และระบบ Dashboard สำเร็จแล้ว!")
@@ -203,34 +190,7 @@ if camera_photo is not None:
                     st.error(f"❌ Google Forms ปฏิเสธข้อมูล (Error {response.status_code})")
                     
             except Exception as e:
-                st.error(f"❌ ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้: {e}")
-
-# ==========================================
-# ส่วนเสริม: แสดง Dashboard สถิติ
-# ==========================================
-st.markdown("---")
-st.header("📊 Dashboard เฝ้าระวังโรคไตระดับอำเภอ")
-
-if os.path.exists("ckd_database.csv"):
-    df = pd.read_csv("ckd_database.csv")
-    
-    with st.expander("ดูตารางข้อมูลดิบทั้งหมด (Excel)"):
-        st.dataframe(df)
-        
-    st.subheader("📈 แผนภูมิผู้ที่มีความเสี่ยงสูง (แบ่งตามอำเภอ)")
-    risk_df = df[df["ผลการประเมิน"].isin(["ความเสี่ยงสูง", "ความเสี่ยงปานกลาง"])]
-    
-    if not risk_df.empty:
-        district_counts = risk_df["อำเภอ"].value_counts()
-        st.bar_chart(district_counts)
-    else:
-        st.info("ยังไม่มีผู้ป่วยที่มีความเสี่ยงในระบบ")
-        
-    if st.button("🗑️ ล้างข้อมูลทดสอบทั้งหมด"):
-        os.remove("ckd_database.csv")
-        st.rerun()
-else:
-    st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+                st.error(f"❌ ไม่สามารถส่งข้อมูลได้: {e}")
 
 
 

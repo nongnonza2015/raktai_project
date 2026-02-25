@@ -114,29 +114,39 @@ if camera_photo is not None:
     st.info(f"🔬 **ระดับโปรตีนที่ AI อ่านได้คือ:** `{matched_result}`")
 
     # ==========================================
-    # ส่วนที่ 4: ระบบวิเคราะห์ความเสี่ยง (Risk Scoring)
+    # ส่วนที่ 4: ระบบวิเคราะห์ความเสี่ยง (Risk Scoring) - แก้ไขใหม่
     # ==========================================
     st.header("🚨 4. สรุปผลความเสี่ยงโรคไต (CKD Risk Score)")
     
     risk_score = 0
     
-    if age >= 60:
-        risk_score += 1
-
-    if has_diabetes:
-        risk_score += 2   
-    if has_hypertension:
-        risk_score += 1   
-
-    if nsaids_usage == "กินประจำ (มากกว่า 2 ครั้ง/สัปดาห์)":
-        risk_score += 2   
+    if age >= 60: risk_score += 1
+    if has_diabetes: risk_score += 2   
+    if has_hypertension: risk_score += 1   
+    if nsaids_usage == "กินประจำ (มากกว่า 2 ครั้ง/สัปดาห์)": risk_score += 2   
 
     if "Trace" in matched_result or "+1" in matched_result:
         risk_score += 2
     elif "+2" in matched_result or "+3" in matched_result or "+4" in matched_result:
         risk_score += 4
 
-    result_text = "ปกติ" 
+    # --- ส่วนที่เพิ่มเข้ามาเพื่อให้ทำงานได้จริง ---
+    if risk_score >= 5:
+        result_text = "ความเสี่ยงสูง"
+        color_theme = "error" # สีแดง
+        st.error(f"⚠️ ผลการประเมิน: {result_text} (คะแนน: {risk_score})")
+        st.markdown("❗ **คำแนะนำ:** ควรพบแพทย์เพื่อตรวจเลือด (eGFR/Creatinine) โดยด่วน")
+    elif risk_score >= 3:
+        result_text = "ความเสี่ยงปานกลาง"
+        color_theme = "warning" # สีส้ม
+        st.warning(f"🟡 ผลการประเมิน: {result_text} (คะแนน: {risk_score})")
+        st.markdown("💡 **คำแนะนำ:** ควรปรับพฤติกรรม ลดเค็ม และนัดตรวจซ้ำใน 3 เดือน")
+    else:
+        result_text = "ความเสี่ยงต่ำ / ปกติ"
+        st.success(f"✅ ผลการประเมิน: {result_text} (คะแนน: {risk_score})")
+    
+    # แสดงคะแนนเป็น Metric ให้สวยงาม
+    st.metric(label="คะแนนความเสี่ยงรวม", value=risk_score)
 
     # ==========================================
     # ส่วนที่ 5: บันทึกข้อมูล
@@ -218,6 +228,7 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+
 
 
 

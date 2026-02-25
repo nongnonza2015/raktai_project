@@ -3,11 +3,13 @@ import cv2
 import numpy as np
 import math
 from PIL import Image
-
+import pandas as pd  # เพิ่มตัวนี้ สำหรับจัดการฐานข้อมูล
+import os            # เพิ่มตัวนี้ สำหรับจัดการไฟล์
+from datetime import datetime # เพิ่มตัวนี้ สำหรับเก็บเวลาที่ตรวจ
+import requests  # <-- เพิ่มตัวนี้เข้ามาเพื่อใช้ยิงข้อมูลขึ้นเน็ต
 # ==========================================
 # ส่วนที่ 1: การตั้งค่าหน้าเว็บ & เก็บข้อมูลความเสี่ยง
 # ==========================================
-
 st.set_page_config(page_title="CKD Early Detection (Dipstick)", layout="centered")
 
 st.title("🌾 ระบบคัดกรองโรคไตเบื้องต้นสำหรับเกษตรกร")
@@ -22,6 +24,10 @@ with col1:
     age = st.number_input("อายุ (ปี)", min_value=1, max_value=120, value=45)
     gender = st.selectbox("เพศ", ["ชาย", "หญิง"])
 
+st.markdown("---")
+st.subheader("📍 พื้นที่ปฏิบัติงาน (สำหรับ อสม. / รพ.สต.)")
+district = st.selectbox("เลือกอำเภอที่ลงพื้นที่คัดกรอง", 
+                        ["อำเภอเมืองสกลนคร", "อำเภอกุสุมาลย์", "อำเภอกุสุมาลย์", "อำเภอพรรณานิคม", "อำเภอพังโคน", "อื่นๆ"])
 with col2:
     # ปัจจัยเสี่ยงหลักของโรคไตในเกษตรกร
     has_disease = st.checkbox("🩺 มีโรคประจำตัว (เบาหวาน / ความดันสูง)")
@@ -154,3 +160,72 @@ if camera_photo is not None:
         
     st.markdown("---")
     st.caption("💡 หมายเหตุ: แอปพลิเคชันนี้เป็นเพียงเครื่องมือคัดกรองเบื้องต้น ไม่สามารถใช้แทนการวินิจฉัยของแพทย์ได้")
+    # ==========================================
+    # ส่วนที่ 5: บันทึกข้อมูลขึ้น Google Sheets (ผ่าน Google Forms)
+    # ==========================================
+    st.markdown("---")
+    st.header("💾 5. บันทึกข้อมูลลงฐานข้อมูลส่วนกลาง (Google Sheets)")
+    
+    if st.button("📥 บันทึกผลการคัดกรองเคสนี้"):
+        with st.spinner("กำลังส่งข้อมูลขึ้น Google Sheets..."):
+            try:
+                # 1. URL ของฟอร์มคุณ (เปลี่ยนจาก viewform เป็น formResponse)
+                FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdmHo3tH30h7iOe0ckfoktY6aPk_R7eTAbunYy0dbqXNOWPoQ/formResponse"
+                
+                # 2. จับคู่รหัสลับกับข้อมูลในแอป
+                form_data = {
+                    "entry.226071067": district,
+                    "entry.1224620038": age,
+                    "entry.1030234450": gender,
+                    "entry.853278913": "เป็น" if has_diabetes else "ไม่เป็น",
+                    "entry.1930442439": "เป็น" if has_hypertension else "ไม่เป็น",
+                    "entry.853069744": nsaids_usage,
+                    "entry.643930526": matched_result,
+                    "entry.19531897": risk_score,
+                    "entry.1594709429": "ความเสี่ยงสูง" if risk_score >= 5 else "ความเสี่ยงปานกลาง" if risk_score >= 3 else "ปกติ"
+                }
+                
+                # 3. ยิงข้อมูลขึ้นเน็ต
+                response = requests.post(FORM_URL, data=form_data)
+                
+                if response.status_code == 200:
+                    st.success("✅ บันทึกข้อมูลขึ้น Google Sheets สำเร็จแล้ว! ข้อมูลปลอดภัยและไม่มีวันหายแน่นอน")
+                    st.balloons() # ใส่เอฟเฟกต์ลูกโป่งฉลองตอนบันทึกสำเร็จ 🎈
+                else:
+                    st.error("❌ เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง")
+            
+            except Exception as e:
+                st.error(f"❌ ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้: {e}")
+
+    # ==========================================
+    # ส่วนเสริม: แสดง Dashboard สถิติแบบ Real-time ให้กรรมการดู
+    # ==========================================
+    st.header("📊 Dashboard เฝ้าระวังโรคไตระดับอำเภอ")
+    
+    if os.path.exists("ckd_database.csv"):
+        df = pd.read_csv("ckd_database.csv")
+        
+        # แสดงตารางข้อมูลดิบ (ซ่อนไว้ ให้กดกางดูได้)
+        with st.expander("ดูตารางข้อมูลดิบทั้งหมด (Excel)"):
+            st.dataframe(df)
+            
+        # สร้างกราฟแท่งสรุปจำนวนคนที่มีความเสี่ยงสูง ในแต่ละอำเภอ
+        st.subheader("📈 แผนภูมิผู้ที่มีความเสี่ยงสูง (แบ่งตามอำเภอ)")
+        
+        # กรองเอาเฉพาะคนที่เสี่ยงสูงและปานกลาง
+        risk_df = df[df["ผลการประเมิน"].isin(["ความเสี่ยงสูง", "ความเสี่ยงปานกลาง"])]
+        
+        if not risk_df.empty:
+            # นับจำนวนเคสในแต่ละอำเภอ
+            district_counts = risk_df["อำเภอ"].value_counts()
+            st.bar_chart(district_counts)
+        else:
+            st.info("ยังไม่มีผู้ป่วยที่มีความเสี่ยงในระบบ")
+            
+        # ปุ่มล้างข้อมูล (เผื่อเอาไว้เคลียร์ข้อมูลตอนทดสอบพรีเซนต์)
+        if st.button("🗑️ ล้างข้อมูลทดสอบทั้งหมด"):
+            os.remove("ckd_database.csv")
+            st.rerun()
+    else:
+        st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ!")
+        

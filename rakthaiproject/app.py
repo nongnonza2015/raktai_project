@@ -181,7 +181,7 @@ if camera_photo is not None:
 
                 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdmHo3tH30h7iOe0ckfoktY6aPk_R7eTAbunYy0dbqXNOWPoQ/formResponse"
                 
-               form_data = {
+    form_data = {
                     "entry.226071067": district,
                     "entry.1224620038": (age), 
                     "entry.1030234450": gender,
@@ -229,6 +229,7 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+
 
 
 

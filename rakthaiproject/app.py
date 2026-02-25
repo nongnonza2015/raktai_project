@@ -209,14 +209,11 @@ if camera_photo is not None:
                 
                 response = requests.post(FORM_URL, data=form_data)
                 
-                if response.status_code == 200:
+               if response.status_code == 200:
                     st.success("✅ บันทึกข้อมูลขึ้น Google Sheets และระบบ Dashboard สำเร็จแล้ว!")
                     st.balloons() 
                 else:
-                    st.error("❌ เกิดข้อผิดพลาดในการส่งข้อมูลขึ้นเน็ต")
-            
-            except Exception as e:
-                st.error(f"❌ ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้: {e}")
+                    st.error(f"❌ Google Forms ปฏิเสธข้อมูล (Error {response.status_code})")
 
 # ==========================================
 # ส่วนเสริม: แสดง Dashboard สถิติ (ดึงออกมาไว้นอกเงื่อนไขกล้อง เพื่อให้โชว์ตลอดเวลา)
@@ -244,4 +241,5 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+
 

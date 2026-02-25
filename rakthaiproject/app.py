@@ -3,10 +3,10 @@ import cv2
 import numpy as np
 import math
 from PIL import Image
-import pandas as pd  
-import os            
-from datetime import datetime 
-import requests  
+import pandas as pd
+import os
+from datetime import datetime
+import requests
 
 # ==========================================
 # ส่วนที่ 1: การตั้งค่าหน้าเว็บ & เก็บข้อมูลความเสี่ยง
@@ -177,12 +177,13 @@ if img_file is not None:
                 st.write("📌 ปัจจัยเร่ง: มีโรคประจำตัว (เบาหวาน/ความดัน)")
 
     # ==========================================
-    # ส่วนที่ 5: บันทึกข้อมูล
+    # ส่วนที่ 5: บันทึกข้อมูล (ปรับปรุงปุ่มให้ชัดขึ้น)
     # ==========================================
     st.markdown("---")
     st.header("💾 5. บันทึกข้อมูลลงฐานข้อมูลส่วนกลาง")
     
-    if st.button("📥 บันทึกผลการคัดกรองเคสนี้"):
+    # เพิ่ม type="primary" และ use_container_width=True เพื่อให้ปุ่มใหญ่และสีเด่นชัด
+    if st.button("📥 ยืนยันและบันทึกผลการคัดกรองเคสนี้", type="primary", use_container_width=True):
         with st.spinner("กำลังส่งข้อมูล..."):
             try:
                 # 1. บันทึกลง Local CSV
@@ -213,7 +214,8 @@ if img_file is not None:
                 
                 if response.status_code == 200:
                     st.success("✅ บันทึกข้อมูลขึ้น Google Sheets และระบบ Dashboard สำเร็จแล้ว!")
-                    st.balloons() 
+                    # เปลี่ยนจากลูกโป่ง (st.balloons) เป็น Toast notification ที่ดูเป็นทางการ
+                    st.toast("บันทึกข้อมูลเข้าสู่ระบบเรียบร้อย", icon="✅")
                 else:
                     st.error(f"❌ Google Forms ปฏิเสธข้อมูล (Error {response.status_code})")
                     
@@ -246,4 +248,3 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
-

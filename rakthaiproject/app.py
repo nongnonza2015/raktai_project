@@ -183,13 +183,13 @@ if camera_photo is not None:
                 
                form_data = {
     "entry.226071067": district,
-    "entry.1224620038": str(age),  # เติม str()
+    "entry.1224620038": (age), 
     "entry.1030234450": gender,
     "entry.853278913": "เป็น" if has_diabetes else "ไม่เป็น",
     "entry.1930442439": "เป็น" if has_hypertension else "ไม่เป็น",
     "entry.853069744": nsaids_usage,
     "entry.643930526": matched_result,
-    "entry.19531897": str(risk_score), # เติม str()
+    "entry.19531897": (risk_score), 
     "entry.1594709429": result_text
 }
                 response = requests.post(FORM_URL, data=form_data)
@@ -229,5 +229,6 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+
 
 

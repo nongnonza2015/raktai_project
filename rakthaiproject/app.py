@@ -92,7 +92,27 @@ if camera_photo is not None:
         st.markdown(f"<div style='width:50px;height:50px;background:rgb{balanced_rgb};border:1px solid#000'></div>", unsafe_allow_html=True)
 
     rgb_result = balanced_rgb
+    
+display_img = img_array.copy()
+    
+    # 1. กล่องสีเขียว (ช่องโปรตีน): ตรงกลางเป๊ะ
+    # วาดสี่เหลี่ยมรอบจุด (cy, cx)
+    cv2_rect_p = [(cx-20, cy-20), (cx+20, cy+20)] 
+    
+    # 2. กล่องสีขาว (จุดอ้างอิงแสง): ขยับไปทางขวา
+    cv2_rect_w = [(cx+40, cy-20), (cx+60, cy+20)]
 
+    # แสดงผลเปรียบเทียบใน UI
+    st.write("### 🎯 ตรวจสอบตำแหน่งการวางแผ่นตรวจ")
+    
+    # ใช้สัญลักษณ์วาดกล่องแบบง่ายๆ ด้วย CSS หรือจะโชว์รูปที่ตัดมาก็ได้
+    col_img1, col_img2 = st.columns(2)
+    with col_img1:
+        st.image(protein_box, caption="1. ช่องโปรตีน (ต้องเห็นสีชัดเจน)", width=150)
+    with col_img2:
+        st.image(white_box, caption="2. ขอบขาว (ต้องเห็นพื้นขาว)", width=150)
+
+    st.info("💡 **คำแนะนำ:** หากรูปในช่องที่ 2 ไม่ใช่สีขาว/พลาสติกสีขาว ให้ขยับแผ่นตรวจแล้วถ่ายใหม่")
    # ==========================================
     # ส่วนที่ 3: ระบบ AI เทียบสี (Protein Level) - เวอร์ชันปรับปรุง
     # ==========================================
@@ -291,3 +311,4 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+

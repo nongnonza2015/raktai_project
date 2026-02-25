@@ -192,6 +192,36 @@ if camera_photo is not None:
             except Exception as e:
                 st.error(f"❌ ไม่สามารถส่งข้อมูลได้: {e}")
 
+# ==========================================
+# ส่วนเสริม: แสดง Dashboard สถิติ
+# ==========================================
+st.markdown("---")
+st.header("📊 Dashboard เฝ้าระวังโรคไตระดับอำเภอ")
+
+if os.path.exists("ckd_database.csv"):
+    df = pd.read_csv("ckd_database.csv")
+    
+    with st.expander("ดูตารางข้อมูลดิบทั้งหมด (Excel)"):
+        st.dataframe(df)
+        
+    st.subheader("📈 แผนภูมิผู้ที่มีความเสี่ยงสูง (แบ่งตามอำเภอ)")
+    risk_df = df[df["ผลการประเมิน"].isin(["ความเสี่ยงสูง", "ความเสี่ยงปานกลาง"])]
+    
+    if not risk_df.empty:
+        district_counts = risk_df["อำเภอ"].value_counts()
+        st.bar_chart(district_counts)
+    else:
+        st.info("ยังไม่มีผู้ป่วยที่มีความเสี่ยงในระบบ")
+        
+    if st.button("🗑️ ล้างข้อมูลทดสอบทั้งหมด"):
+        os.remove("ckd_database.csv")
+        st.rerun()
+else:
+    st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+
+
+
+
 
 
 

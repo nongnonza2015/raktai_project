@@ -113,40 +113,62 @@ if camera_photo is not None:
     matched_result = get_closest_color(rgb_result, REFERENCE_COLORS)
     st.info(f"🔬 **ระดับโปรตีนที่ AI อ่านได้คือ:** `{matched_result}`")
 
+   # ==========================================
+    # ส่วนที่ 4: ระบบวิเคราะห์ความเสี่ยง (Risk Scoring) - เวอร์ชันเน้นความสวยงาม
     # ==========================================
-    # ส่วนที่ 4: ระบบวิเคราะห์ความเสี่ยง (Risk Scoring) - แก้ไขใหม่
-    # ==========================================
-    st.header("🚨 4. สรุปผลความเสี่ยงโรคไต (CKD Risk Score)")
-    
-    risk_score = 0
-    
-    if age >= 60: risk_score += 1
-    if has_diabetes: risk_score += 2   
-    if has_hypertension: risk_score += 1   
-    if nsaids_usage == "กินประจำ (มากกว่า 2 ครั้ง/สัปดาห์)": risk_score += 2   
+    st.markdown("---")
+    st.header("🚨 4. สรุปผลการประเมินความเสี่ยง")
 
+    # 1. คำนวณคะแนน (Logic)
+    risk_score = 0
+    if age >= 60: risk_score += 1
+    if has_diabetes: risk_score += 2
+    if has_hypertension: risk_score += 1
+    if nsaids_usage == "กินประจำ (มากกว่า 2 ครั้ง/สัปดาห์)": risk_score += 2
+
+    # วิเคราะห์จากผล Dipstick
     if "Trace" in matched_result or "+1" in matched_result:
         risk_score += 2
-    elif "+2" in matched_result or "+3" in matched_result or "+4" in matched_result:
+    elif any(x in matched_result for x in ["+2", "+3", "+4"]):
         risk_score += 4
 
-    # --- ส่วนที่เพิ่มเข้ามาเพื่อให้ทำงานได้จริง ---
-    if risk_score >= 5:
-        result_text = "ความเสี่ยงสูง"
-        color_theme = "error" # สีแดง
-        st.error(f"⚠️ ผลการประเมิน: {result_text} (คะแนน: {risk_score})")
-        st.markdown("❗ **คำแนะนำ:** ควรพบแพทย์เพื่อตรวจเลือด (eGFR/Creatinine) โดยด่วน")
-    elif risk_score >= 3:
+    # 2. กำหนดสถานะและสี
+    if risk_score >= 6:
+        result_text = "ความเสี่ยงสูงมาก"
+        status_color = "🔴"
+        st_function = st.error
+        advice = "🚨 **ข้อแนะนำ:** ควรส่งต่อพบแพทย์เพื่อเจาะเลือดตรวจค่าไต (eGFR) ทันที"
+    elif 4 <= risk_score <= 5:
         result_text = "ความเสี่ยงปานกลาง"
-        color_theme = "warning" # สีส้ม
-        st.warning(f"🟡 ผลการประเมิน: {result_text} (คะแนน: {risk_score})")
-        st.markdown("💡 **คำแนะนำ:** ควรปรับพฤติกรรม ลดเค็ม และนัดตรวจซ้ำใน 3 เดือน")
+        status_color = "🟡"
+        st_function = st.warning
+        advice = "⚠️ **ข้อแนะนำ:** ควรลดอาหารเค็ม เลิกใช้ยาแก้ปวด และนัดตรวจปัสสาวะซ้ำใน 2 สัปดาห์"
     else:
         result_text = "ความเสี่ยงต่ำ / ปกติ"
-        st.success(f"✅ ผลการประเมิน: {result_text} (คะแนน: {risk_score})")
-    
-    # แสดงคะแนนเป็น Metric ให้สวยงาม
-    st.metric(label="คะแนนความเสี่ยงรวม", value=risk_score)
+        status_color = "🟢"
+        st_function = st.success
+        advice = "✅ **ข้อแนะนำ:** รักษาพฤติกรรมสุขภาพที่ดี ดื่มน้ำให้เพียงพอ และตรวจสุขภาพประจำปี"
+
+    # 3. การแสดงผลแบบ Dashboard ส่วนตัว
+    with st.container():
+        # สร้างคอลัมน์เพื่อโชว์ Metric
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric(label="ระดับโปรตีน", value=matched_result)
+        with m2:
+            st.metric(label="คะแนนความเสี่ยง", value=f"{risk_score} คะแนน")
+        with m3:
+            st.write("**สถานะปัจจุบัน**")
+            st.markdown(f"### {status_color} {result_text}")
+
+        # กล่องสรุปผลเด่นๆ
+        st_function(f"### ผลสรุป: {result_text}")
+        
+        with st.expander("📝 รายละเอียดการประเมินและคำแนะนำ"):
+            st.markdown(advice)
+            st.write(f"วิเคราะห์สำหรับผู้ป่วยเพศ {gender} อายุ {age} ปี")
+            if has_diabetes or has_hypertension:
+                st.write("📌 ปัจจัยเร่ง: มีโรคประจำตัว (เบาหวาน/ความดัน)")
 
     # ==========================================
     # ส่วนที่ 5: บันทึกข้อมูล
@@ -228,6 +250,7 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+
 
 
 

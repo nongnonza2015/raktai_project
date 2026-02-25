@@ -176,13 +176,30 @@ if img_file is not None:
             if has_diabetes or has_hypertension:
                 st.write("📌 ปัจจัยเร่ง: มีโรคประจำตัว (เบาหวาน/ความดัน)")
 
-    # ==========================================
-    # ส่วนที่ 5: บันทึกข้อมูล (ปรับปรุงปุ่มให้ชัดขึ้น)
+   # ==========================================
+    # ส่วนที่ 5: บันทึกข้อมูล (ปรับแต่งสีปุ่มด้วย CSS)
     # ==========================================
     st.markdown("---")
     st.header("💾 5. บันทึกข้อมูลลงฐานข้อมูลส่วนกลาง")
     
-    # เพิ่ม type="primary" และ use_container_width=True เพื่อให้ปุ่มใหญ่และสีเด่นชัด
+    # แทรก CSS เพื่อเปลี่ยนสีปุ่มแบบ Primary ให้เป็นสีเขียว (สื่อถึงการยืนยัน/บันทึก)
+    st.markdown("""
+    <style>
+    button[kind="primary"] {
+        background-color: #059669 !important; /* สีเขียว */
+        border-color: #059669 !important;
+        color: white !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* เพิ่มเงาให้ปุ่มดูมีมิติ น่ากด */
+    }
+    button[kind="primary"]:hover {
+        background-color: #047857 !important; /* สีเขียวเข้มขึ้นเมื่อเอาเมาส์ชี้ */
+        border-color: #047857 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ปุ่มจะแสดงผลเป็นสีเขียวตาม CSS ที่เราตั้งไว้ด้านบน
     if st.button("📥 ยืนยันและบันทึกผลการคัดกรองเคสนี้", type="primary", use_container_width=True):
         with st.spinner("กำลังส่งข้อมูล..."):
             try:
@@ -214,14 +231,13 @@ if img_file is not None:
                 
                 if response.status_code == 200:
                     st.success("✅ บันทึกข้อมูลขึ้น Google Sheets และระบบ Dashboard สำเร็จแล้ว!")
-                    # เปลี่ยนจากลูกโป่ง (st.balloons) เป็น Toast notification ที่ดูเป็นทางการ
                     st.toast("บันทึกข้อมูลเข้าสู่ระบบเรียบร้อย", icon="✅")
                 else:
                     st.error(f"❌ Google Forms ปฏิเสธข้อมูล (Error {response.status_code})")
                     
             except Exception as e:
                 st.error(f"❌ ไม่สามารถส่งข้อมูลได้: {e}")
-
+                
 # ==========================================
 # ส่วนเสริม: แสดง Dashboard สถิติ
 # ==========================================
@@ -248,3 +264,4 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+

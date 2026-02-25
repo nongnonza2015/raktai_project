@@ -239,29 +239,33 @@ if img_file is not None:
                 st.error(f"❌ ไม่สามารถส่งข้อมูลได้: {e}")
                 
 # ==========================================
-# ส่วนเสริม: แสดง Dashboard สถิติ
+# ส่วนเสริม: แสดง Dashboard สถิติ (ซ่อนไว้โดยค่าเริ่มต้น)
 # ==========================================
 st.markdown("---")
-st.header("📊 Dashboard เฝ้าระวังโรคไตระดับอำเภอ")
 
-if os.path.exists("ckd_database.csv"):
-    df = pd.read_csv("ckd_database.csv")
+# ใช้ st.expander เพื่อพับเก็บ Dashboard ซ่อนไว้ (expanded=False คือซ่อนไว้ตอนเริ่มแอป)
+with st.expander("📊 คลิกที่นี่เพื่อดู Dashboard สถิติเฝ้าระวังโรคไต", expanded=False):
     
-    with st.expander("ดูตารางข้อมูลดิบทั้งหมด (Excel)"):
-        st.dataframe(df)
+    if os.path.exists("ckd_database.csv"):
+        df = pd.read_csv("ckd_database.csv")
         
-    st.subheader("📈 แผนภูมิผู้ที่มีความเสี่ยงสูง (แบ่งตามอำเภอ)")
-    risk_df = df[df["ผลการประเมิน"].isin(["ความเสี่ยงสูงมาก", "ความเสี่ยงปานกลาง"])]
-    
-    if not risk_df.empty:
-        district_counts = risk_df["อำเภอ"].value_counts()
-        st.bar_chart(district_counts)
+        st.write("**ตารางข้อมูลดิบทั้งหมด (Excel)**")
+        st.dataframe(df, use_container_width=True)
+            
+        st.markdown("---")
+        st.subheader("📈 แผนภูมิผู้ที่มีความเสี่ยง (แบ่งตามอำเภอ)")
+        risk_df = df[df["ผลการประเมิน"].isin(["ความเสี่ยงสูงมาก", "ความเสี่ยงปานกลาง"])]
+        
+        if not risk_df.empty:
+            district_counts = risk_df["อำเภอ"].value_counts()
+            st.bar_chart(district_counts)
+        else:
+            st.info("ยังไม่มีผู้ป่วยที่มีความเสี่ยงในระบบ")
+            
+        st.markdown("---")
+        if st.button("🗑️ ล้างข้อมูลทดสอบทั้งหมด", type="secondary"):
+            os.remove("ckd_database.csv")
+            st.rerun()
     else:
-        st.info("ยังไม่มีผู้ป่วยที่มีความเสี่ยงในระบบ")
-        
-    if st.button("🗑️ ล้างข้อมูลทดสอบทั้งหมด"):
-        os.remove("ckd_database.csv")
-        st.rerun()
-else:
-    st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+        st.info("ยังไม่มีข้อมูลในระบบ กราฟจะแสดงผลเมื่อมีการบันทึกข้อมูลแล้วครับ")
 

@@ -20,7 +20,6 @@ st.header("📋 1. ข้อมูลผู้รับการตรวจ (Ri
 st.info("ข้อมูลเหล่านี้จะถูกนำไปคำนวณร่วมกับผลปัสสาวะ เพื่อประเมินความเสี่ยงที่แม่นยำขึ้น")
 
 col1, col2 = st.columns(2)
-
 with col1:
     age = st.number_input("อายุ (ปี)", min_value=1, max_value=120, value=45)
     gender = st.selectbox("เพศ", ["ชาย", "หญิง"])
@@ -43,84 +42,65 @@ with col4:
 st.markdown("---")
 
 # ==========================================
-# ส่วนที่ 2: ระบบประมวลผลภาพ (พร้อม White Balance)
+# ส่วนที่ 2: ระบบกล้องถ่ายภาพ (ไม่ต้องใช้ av/webrtc)
 # ==========================================
-st.header("📷 2. ถ่ายภาพแผ่นทดสอบ (Dipstick)")
+st.header("📷 2. เล็งและถ่ายภาพแผ่นทดสอบ (Dipstick)")
+st.info("💡 วิธีใช้: ถือแผ่นตรวจให้แนวตั้งตรงกับกลางหน้าจอ แล้วกดถ่ายภาพ (ระบบจะตีกรอบวิเคราะห์ให้อัตโนมัติหลังกดถ่าย)")
 
-# ฟังก์ชันปรับค่าแสง (White Balance)
-def apply_white_balance(target_rgb, white_ref_rgb):
-    # หาอัตราส่วนการปรับแสง (Standard White คือ 255)
-    r_scale = 255.0 / max(white_ref_rgb[0], 1)
-    g_scale = 255.0 / max(white_ref_rgb[1], 1)
-    b_scale = 255.0 / max(white_ref_rgb[2], 1)
+# ใช้คำสั่งกล้องมาตรฐานของ Streamlit
+img_file = st.camera_input("📸 ส่องแผ่นตรวจให้ตรงเป้าแล้วกดถ่ายภาพ")
+
+# ==========================================
+# ส่วนที่ 3: ระบบ AI เทียบสี (Protein Level) ทำงานเมื่อกดถ่ายรูป
+# ==========================================
+if img_file is not None:
+    st.markdown("---")
+    st.header("🧠 3. ผลการวิเคราะห์สีปัสสาวะ (Protein Level)")
     
-    # ปรับค่าสีเป้าหมายตามอัตราส่วน
-    new_r = min(int(target_rgb[0] * r_scale), 255)
-    new_g = min(int(target_rgb[1] * g_scale), 255)
-    new_b = min(int(target_rgb[2] * b_scale), 255)
-    return (new_r, new_g, new_b)
-
-camera_photo = st.camera_input("คลิกเพื่อถ่ายภาพ")
-
-if camera_photo is not None:
-    image = Image.open(camera_photo)
+    # อ่านภาพที่ถ่ายได้ด้วย Pillow แล้วแปลงเป็น Array แบบ RGB
+    image = Image.open(img_file)
     img_array = np.array(image)
+    
     h, w, _ = img_array.shape
     cx, cy = w // 2, h // 2
 
+    # --- โชว์ภาพพร้อมวาดกรอบให้ผู้ใช้ดูว่า AI เล็งตรงไหน ---
+    st.subheader("🎯 ตำแหน่งที่ AI ดึงข้อมูลสีไปวิเคราะห์")
+    preview_img = img_array.copy()
+    # วาดกล่องสีเขียว (ช่องโปรตีน) ตรงกลาง
+    cv2.rectangle(preview_img, (cx-20, cy-20), (cx+20, cy+20), (0, 255, 0), 3) 
+    # วาดกล่องสีขาว (จุดอ้างอิงแสง) เยื้องไปทางขวา
+    cv2.rectangle(preview_img, (cx+40, cy-20), (cx+60, cy+20), (255, 255, 255), 3)
+    
+    # แสดงรูปภาพที่วาดกรอบแล้ว
+    st.image(preview_img, caption="กรอบสีเขียว = ช่องโปรตีน | กรอบสีขาว = จุดเทียบแสง")
+    
+    # --- ตัดภาพเพื่อเอาสีไปคำนวณ ---
     # 1. ตัดภาพส่วน "ช่องสีโปรตีน" (ตรงกลาง)
     protein_box = img_array[cy-20:cy+20, cx-20:cx+20]
     avg_p = np.average(np.average(protein_box, axis=0), axis=0)
     raw_rgb = (int(avg_p[0]), int(avg_p[1]), int(avg_p[2]))
 
-    # 2. ตัดภาพส่วน "ขอบสีขาว" (ขยับไปทางขวาของช่องโปรตีนเล็กน้อย)
-    # หมายเหตุ: ตอนถ่ายต้องให้ขอบสีขาวของแผ่นตรวจอยู่ในโซนนี้ด้วย
+    # 2. ตัดภาพส่วน "ขอบสีขาว" 
     white_box = img_array[cy-20:cy+20, cx+40:cx+60] 
     avg_w = np.average(np.average(white_box, axis=0), axis=0)
     white_rgb = (int(avg_w[0]), int(avg_w[1]), int(avg_w[2]))
 
+    # ฟังก์ชันปรับค่าแสง (White Balance)
+    def apply_white_balance(target_rgb, white_ref_rgb):
+        r_scale = 255.0 / max(white_ref_rgb[0], 1)
+        g_scale = 255.0 / max(white_ref_rgb[1], 1)
+        b_scale = 255.0 / max(white_ref_rgb[2], 1)
+        
+        new_r = min(int(target_rgb[0] * r_scale), 255)
+        new_g = min(int(target_rgb[1] * g_scale), 255)
+        new_b = min(int(target_rgb[2] * b_scale), 255)
+        return (new_r, new_g, new_b)
+
     # 3. คำนวณ White Balance
     balanced_rgb = apply_white_balance(raw_rgb, white_rgb)
 
-    # แสดงผลเปรียบเทียบ
-    col_v1, col_v2 = st.columns(2)
-    with col_v1:
-        st.write("🎨 สีที่กล้องเห็น (Raw):")
-        st.markdown(f"<div style='width:50px;height:50px;background:rgb{raw_rgb};border:1px solid#000'></div>", unsafe_allow_html=True)
-    with col_v2:
-        st.write("✨ สีที่ปรับปรุงแล้ว (Balanced):")
-        st.markdown(f"<div style='width:50px;height:50px;background:rgb{balanced_rgb};border:1px solid#000'></div>", unsafe_allow_html=True)
-
-    rgb_result = balanced_rgb
-    
-    display_img = img_array.copy()
-    
-    # 1. กล่องสีเขียว (ช่องโปรตีน): ตรงกลางเป๊ะ
-    # วาดสี่เหลี่ยมรอบจุด (cy, cx)
-    cv2.rectangle(display_img, (cx-20, cy-20), (cx+20, cy+20), (0, 255, 0), 2)
-    
-    # 2. กล่องสีขาว (จุดอ้างอิงแสง): ขยับไปทางขวา
-    cv2.rectangle(display_img, (cx+40, cy-20), (cx+60, cy+20), (255, 255, 255), 2)
-
-    # แสดงผลเปรียบเทียบใน UI พร้อมรูปที่ถูกวาดกรอบ
-    st.write("### 🎯 ตรวจสอบตำแหน่งการวางแผ่นตรวจ"); st.image(display_img)
-    
-    # ใช้สัญลักษณ์วาดกล่องแบบง่ายๆ ด้วย CSS หรือจะโชว์รูปที่ตัดมาก็ได้
-    col_img1, col_img2 = st.columns(2)
-    with col_img1:
-        st.image(protein_box, caption="1. ช่องโปรตีน (ต้องเห็นสีชัดเจน)", width=150)
-    with col_img2:
-        st.image(white_box, caption="2. ขอบขาว (ต้องเห็นพื้นขาว)", width=150)
-
-    st.info("💡 **คำแนะนำ:** หากรูปในช่องที่ 2 ไม่ใช่สีขาว/พลาสติกสีขาว ให้ขยับแผ่นตรวจแล้วถ่ายใหม่")
-   # ==========================================
-    # ส่วนที่ 3: ระบบ AI เทียบสี (Protein Level) - เวอร์ชันปรับปรุง
-    # ==========================================
-    st.markdown("---")
-    st.header("🧠 3. ผลการวิเคราะห์สีปัสสาวะ (Protein Level)")
-    
     # ตารางค่าสีอ้างอิงมาตรฐาน (RGB) 
-    # ปรับจูนให้รองรับค่าสีที่ผ่าน White Balance แล้ว
     REFERENCE_COLORS = {
         "Negative (ปกติ)": (205, 225, 130),  
         "Trace (ร่องรอย)": (185, 210, 125),  
@@ -130,43 +110,21 @@ if camera_photo is not None:
         "+4 (2000+ mg/dL)": (40, 95, 115)    
     }
     
-    def normalize_color(target_rgb, reference_white_rgb): 
-        # ค่าสีขาวมาตรฐานควรจะเป็น (255, 255, 255)
-        # เราจะหาอัตราส่วน (Scaling Factor) เพื่อปรับสี
-        r_scale = 255.0 / max(reference_white_rgb[0], 1)
-        g_scale = 255.0 / max(reference_white_rgb[1], 1)
-        b_scale = 255.0 / max(reference_white_rgb[2], 1)
-        
-        # นำอัตราส่วนไปคูณกับสีที่ได้ เพื่อให้ได้สีที่ "สมจริง" ขึ้น
-        normalized_r = min(int(target_rgb[0] * r_scale), 255)
-        normalized_g = min(int(target_rgb[1] * g_scale), 255)
-        normalized_b = min(int(target_rgb[2] * b_scale), 255)
-        
-        return (normalized_r, normalized_g, normalized_b)
     def get_closest_color(target_rgb, color_dict):
-        """ค้นหาผลลัพธ์ที่สีใกล้เคียงกับค่าที่อ่านได้มากที่สุด"""
         min_distance = float('inf')
         closest_label = "ไม่สามารถระบุได้"
-        
         for label, ref_rgb in color_dict.items():
-            # คำนวณระยะห่างของสีด้วยสูตร Euclidean Distance
-            distance = math.sqrt(
-                (target_rgb[0] - ref_rgb[0])**2 + 
-                (target_rgb[1] - ref_rgb[1])**2 + 
-                (target_rgb[2] - ref_rgb[2])**2
-            )
+            distance = math.sqrt(sum((target_rgb[i] - ref_rgb[i])**2 for i in range(3)))
             if distance < min_distance:
                 min_distance = distance
                 closest_label = label
         return closest_label
 
-    # นำ rgb_result ที่ได้จากส่วนที่ 2 (ที่ผ่านการทำ White Balance แล้ว) มาวิเคราะห์
-    matched_result = get_closest_color(rgb_result, REFERENCE_COLORS)
-    
-    # แสดงหน้าปัดผลลัพธ์
+    # วิเคราะห์สี
+    matched_result = get_closest_color(balanced_rgb, REFERENCE_COLORS)
     st.success(f"🔬 **ระดับโปรตีนที่ AI วิเคราะห์ได้:** `{matched_result}`")
     
-    # เพิ่มแถบสีเปรียบเทียบเพื่อให้ผู้ใช้ตรวจสอบด้วยตาได้อีกครั้ง
+    # เพิ่มแถบสีเปรียบเทียบ
     st.write("📊 **แถบสีมาตรฐานเปรียบเทียบ:**")
     cols = st.columns(6)
     for i, (label, color) in enumerate(REFERENCE_COLORS.items()):
@@ -174,55 +132,42 @@ if camera_photo is not None:
             st.markdown(f"<div style='background-color: rgb{color}; height: 20px; border-radius: 3px; border: 1px solid #ddd;'></div>", unsafe_allow_html=True)
             st.caption(label)
 
-   # ==========================================
+    # ==========================================
     # ส่วนที่ 4: ระบบวิเคราะห์ความเสี่ยง (Risk Scoring) 
     # ==========================================
     st.markdown("---")
     st.header("🚨 4. สรุปผลการประเมินความเสี่ยง")
 
-    # 1. คำนวณคะแนน (Logic)
+    # 1. คำนวณคะแนน 
     risk_score = 0
     if age >= 60: risk_score += 1
     if has_diabetes: risk_score += 2
     if has_hypertension: risk_score += 1
     if nsaids_usage == "กินประจำ (มากกว่า 2 ครั้ง/สัปดาห์)": risk_score += 2
 
-    # วิเคราะห์จากผล Dipstick
-    if "Trace" in matched_result or "+1" in matched_result:
-        risk_score += 2
-    elif any(x in matched_result for x in ["+2", "+3", "+4"]):
-        risk_score += 4
+    if "Trace" in matched_result or "+1" in matched_result: risk_score += 2
+    elif any(x in matched_result for x in ["+2", "+3", "+4"]): risk_score += 4
 
     # 2. กำหนดสถานะและสี
     if risk_score >= 6:
-        result_text = "ความเสี่ยงสูงมาก"
-        status_color = "🔴"
-        st_function = st.error
+        result_text, status_color, st_function = "ความเสี่ยงสูงมาก", "🔴", st.error
         advice = "🚨 **ข้อแนะนำ:** ควรส่งต่อพบแพทย์เพื่อเจาะเลือดตรวจค่าไต (eGFR) ทันที"
     elif 4 <= risk_score <= 5:
-        result_text = "ความเสี่ยงปานกลาง"
-        status_color = "🟡"
-        st_function = st.warning
+        result_text, status_color, st_function = "ความเสี่ยงปานกลาง", "🟡", st.warning
         advice = "⚠️ **ข้อแนะนำ:** ควรลดอาหารเค็ม เลิกใช้ยาแก้ปวด และนัดตรวจปัสสาวะซ้ำใน 2 สัปดาห์"
     else:
-        result_text = "ความเสี่ยงต่ำ / ปกติ"
-        status_color = "🟢"
-        st_function = st.success
+        result_text, status_color, st_function = "ความเสี่ยงต่ำ / ปกติ", "🟢", st.success
         advice = "✅ **ข้อแนะนำ:** รักษาพฤติกรรมสุขภาพที่ดี ดื่มน้ำให้เพียงพอ และตรวจสุขภาพประจำปี"
 
-    # 3. การแสดงผลแบบ Dashboard ส่วนตัว
+    # 3. แสดง Dashboard ส่วนตัว
     with st.container():
-        # สร้างคอลัมน์เพื่อโชว์ Metric
         m1, m2, m3 = st.columns(3)
-        with m1:
-            st.metric(label="ระดับโปรตีน", value=matched_result)
-        with m2:
-            st.metric(label="คะแนนความเสี่ยง", value=f"{risk_score} คะแนน")
+        m1.metric(label="ระดับโปรตีน", value=matched_result)
+        m2.metric(label="คะแนนความเสี่ยง", value=f"{risk_score} คะแนน")
         with m3:
             st.write("**สถานะปัจจุบัน**")
             st.markdown(f"### {status_color} {result_text}")
 
-        # กล่องสรุปผลเด่นๆ
         st_function(f"### ผลสรุป: {result_text}")
         
         with st.expander("📝 รายละเอียดการประเมินและคำแนะนำ"):
@@ -243,15 +188,11 @@ if camera_photo is not None:
                 # 1. บันทึกลง Local CSV
                 new_data = pd.DataFrame([{
                     "วันที่ตรวจ": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "อำเภอ": district,
-                    "อายุ": age,
-                    "เพศ": gender,
+                    "อำเภอ": district, "อายุ": age, "เพศ": gender,
                     "เบาหวาน": "เป็น" if has_diabetes else "ไม่เป็น",
                     "ความดัน": "เป็น" if has_hypertension else "ไม่เป็น",
-                    "ใช้ยาแก้ปวด": nsaids_usage,
-                    "ระดับโปรตีน": matched_result,
-                    "คะแนนความเสี่ยง": risk_score,
-                    "ผลการประเมิน": result_text
+                    "ใช้ยาแก้ปวด": nsaids_usage, "ระดับโปรตีน": matched_result,
+                    "คะแนนความเสี่ยง": risk_score, "ผลการประเมิน": result_text
                 }])
                 
                 if os.path.exists("ckd_database.csv"):
@@ -259,19 +200,13 @@ if camera_photo is not None:
                 else:
                     new_data.to_csv("ckd_database.csv", index=False)
 
-                # 2. เตรียมข้อมูลส่งไป Google Forms (ต้องอยู่ภายใน try บล็อกเดียวกัน)
+                # 2. ส่งไป Google Forms 
                 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdmHo3tH30h7iOe0ckfoktY6aPk_R7eTAbunYy0dbqXNOWPoQ/formResponse"
-                
                 form_data = {
-                    "entry.226071067": str(district),
-                    "entry.1224620038": str(age),
-                    "entry.1030234450": str(gender),
-                    "entry.853278913": "เป็น" if has_diabetes else "ไม่เป็น",
-                    "entry.1930442439": "เป็น" if has_hypertension else "ไม่เป็น",
-                    "entry.853069744": str(nsaids_usage),
-                    "entry.643930526": str(matched_result),
-                    "entry.19531897": str(risk_score), 
-                    "entry.1594709429": str(result_text)
+                    "entry.226071067": str(district), "entry.1224620038": str(age), "entry.1030234450": str(gender),
+                    "entry.853278913": "เป็น" if has_diabetes else "ไม่เป็น", "entry.1930442439": "เป็น" if has_hypertension else "ไม่เป็น",
+                    "entry.853069744": str(nsaids_usage), "entry.643930526": str(matched_result),
+                    "entry.19531897": str(risk_score), "entry.1594709429": str(result_text)
                 }
                 
                 response = requests.post(FORM_URL, data=form_data)

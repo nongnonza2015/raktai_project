@@ -16,7 +16,7 @@ st.set_page_config(page_title="CKD Early Detection (Dipstick)", layout="centered
 st.title("🌾 ระบบคัดกรองโรคไตเบื้องต้นสำหรับเกษตรกรในจังหวัดสกลนคร")
 st.markdown("ผสมผสานการวิเคราะห์แผ่นปัสสาวะ (Dipstick) ด้วย AI เข้ากับข้อมูลความเสี่ยงของผู้ป่วย")
 
-st.header("📋 1. ข้อมูลผู้รับการตรวจ (Risk Factors)")
+st.header("📋 1. ข้อมูลผู้รับการตรวจ (General Information)")
 st.info("ข้อมูลเหล่านี้จะถูกนำไปคำนวณร่วมกับผลปัสสาวะ เพื่อประเมินความเสี่ยงที่แม่นยำขึ้น")
 
 col1, col2 = st.columns(2)
@@ -246,3 +246,4 @@ if os.path.exists("ckd_database.csv"):
         st.rerun()
 else:
     st.info("ยังไม่มีข้อมูลในระบบ ลองทดสอบบันทึกข้อมูลดูสิครับ กราฟถึงจะแสดงผล!")
+

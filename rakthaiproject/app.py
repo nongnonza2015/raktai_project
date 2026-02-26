@@ -269,6 +269,61 @@ if img_file is not None:
                 st.session_state.ai_data = None
                 st.session_state.is_submitted = False
                 st.rerun()
+# ==========================================
+# 📊 7. Dashboard ข้อมูลในพื้นที่ (ปรับปรุงใหม่)
+# ==========================================
+st.markdown("---")
+with st.expander("📊 เปิดดู Dashboard สถิติผู้เข้ารับการคัดกรอง", expanded=False):
+    file_name = "ckd_database.csv"
+    
+    if os.path.exists(file_name):
+        try:
+            df = pd.read_csv(file_name)
+            
+            if not df.empty:
+                # แสดงตารางข้อมูลล่าสุด 5 รายการ
+                st.subheader("📋 ข้อมูลล่าสุด")
+                st.dataframe(df.tail(5), use_container_width=True)
+                
+                st.divider()
+                
+                c_chart1, c_chart2 = st.columns(2)
+                
+                with c_chart1:
+                    st.subheader("📈 ระดับความเสี่ยงในพื้นที่")
+                    # นับจำนวนแยกตามกลุ่มความเสี่ยง
+                    if "Result" in df.columns:
+                        risk_counts = df["Result"].value_counts()
+                        st.bar_chart(risk_counts)
+                    else:
+                        st.info("ยังไม่มีข้อมูล Result")
+
+                with c_chart2:
+                    st.subheader("⚠️ ปัจจัยเสี่ยงที่ตรวจพบ")
+                    # สรุปปัจจัยเสี่ยงจากคอลัมน์ที่เป็น Yes/No
+                    risk_summary = {
+                        "เบาหวาน": (df["DM"] == "Yes").sum() if "DM" in df.columns else 0,
+                        "ความดัน": (df["HT"] == "Yes").sum() if "HT" in df.columns else 0,
+                        "กินเค็ม": (df["High_Sodium"] == "Yes").sum() if "High_Sodium" in df.columns else 0,
+                        "นิ่ว": (df["Stones"] == "Yes").sum() if "Stones" in df.columns else 0,
+                        "สารเคมี": (df["Chemicals"] == "Yes").sum() if "Chemicals" in df.columns else 0
+                    }
+                    st.bar_chart(pd.Series(risk_summary))
+                
+                # เพิ่มเติม: สถิติแยกตามอำเภอ
+                st.subheader("📍 จำนวนผู้เข้ารับการตรวจแยกตามอำเภอ")
+                if "District" in df.columns:
+                    district_counts = df["District"].value_counts()
+                    st.line_chart(district_counts)
+
+            else:
+                st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
+        
+        except Exception as e:
+            st.error(f"❌ ไม่สามารถอ่านไฟล์ CSV ได้: {e}")
+            
+    else:
+        st.info("ℹ️ ยังไม่มีข้อมูลในระบบ Dashboard จะเริ่มแสดงผลเมื่อมีการบันทึกข้อมูลเคสแรก")
 
 
 

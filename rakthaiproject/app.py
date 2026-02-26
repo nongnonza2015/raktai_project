@@ -20,7 +20,7 @@ ai_model = genai.GenerativeModel('gemini-1.5-flash')
 # ==========================================
 st.set_page_config(page_title="CKD AI Scanner", layout="centered")
 
-st.title("🌾 ระบบคัดกรองโรคไต AI (อ่านค่า 3 แถบ)")
+st.title("🌾 ระบบคัดกรองโรคไตสำหรับเกษตรกรในจังหวัดสกลนคร")
 st.markdown("ใช้ Gemini AI วิเคราะห์แผ่นปัสสาวะ (โปรตีน, เลือด, น้ำตาล) พร้อมประเมินความเสี่ยง")
 
 st.header("📋 1. ข้อมูลผู้รับการตรวจ (Risk Factors)")
@@ -50,7 +50,7 @@ st.markdown("---")
 # ส่วนที่ 2: กล้องถ่ายภาพ
 # ==========================================
 st.header("📷 2. ถ่ายภาพแผ่นทดสอบ (Dipstick)")
-st.info("💡 ถือแผ่นตรวจให้เห็นแถบสีชัดเจน (ไม่ต้องเล็งกรอบแล้ว AI จะหาเอง) แล้วกดถ่ายภาพ")
+st.info("💡 ถือแผ่นตรวจให้เห็นแถบสีชัดเจนแล้วกดถ่ายภาพ")
 
 img_file = st.camera_input("📸 ถ่ายภาพแผ่นตรวจ")
 
@@ -183,3 +183,4 @@ if os.path.exists("ckd_database.csv"):
     df = pd.read_csv("ckd_database.csv")
     with st.expander("ดูตารางข้อมูลที่บันทึกไว้"):
         st.dataframe(df)
+

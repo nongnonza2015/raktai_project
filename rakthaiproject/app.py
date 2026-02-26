@@ -270,6 +270,38 @@ if img_file is not None:
                 st.session_state.is_submitted = False
                 st.rerun()
 
+# ==========================================
+# 📊 7. Dashboard ข้อมูลในพื้นที่ (ดึงจาก CSV)
+# ==========================================
+st.markdown("---")
+with st.expander("📊 เปิดดู Dashboard สถิติผู้เข้ารับการคัดกรอง", expanded=False):
+    if os.path.exists("ckd_database.csv"):
+        df = pd.read_csv("ckd_database.csv")
+        st.dataframe(df, use_container_width=True)
+            
+        c_chart1, c_chart2 = st.columns(2)
+        with c_chart1:
+            st.subheader("📈 จำนวนผู้มีความเสี่ยงแยกตามอำเภอ")
+            risk_df = df[df["Result"].str.contains("High Risk|Moderate Risk", na=False)]
+            if not risk_df.empty:
+                st.bar_chart(risk_df["District"].value_counts())
+            else:
+                st.info("ยังไม่พบผู้มีความเสี่ยง")
+                
+        with c_chart2:
+            st.subheader("⚠️ ปัจจัยเสี่ยงที่พบมากที่สุด (จำนวนเคส)")
+            risk_factors = {
+                "กินเค็ม/ปลาร้า": (df["High_Sodium"] == "Yes").sum(),
+                "ใช้ยาชุด/NSAIDs": (df["NSAIDs"] == "กินเป็นประจำ").sum(),
+                "สัมผัสสารเคมี": (df["Chemicals"] == "Yes").sum(),
+                "โรคนิ่ว": (df["Stones"] == "Yes").sum()
+            }
+            st.bar_chart(pd.Series(risk_factors))
+            
+    else:
+        st.info("ยังไม่มีข้อมูลในระบบ กราฟจะแสดงผลเมื่อมีการบันทึกเคสแรกครับ")
+
+
 
 
 

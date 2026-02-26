@@ -6,3 +6,5 @@ Pillow
 pandas
 requests
 google-generativeai
+json
+re

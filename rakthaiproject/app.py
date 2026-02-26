@@ -12,7 +12,7 @@ import re
 # 🔑 1. การตั้งค่า Gemini API และ Google Form
 # ==========================================
 # ⚠️ เปลี่ยน API Key เป็นของคุณที่นี่ (อย่าลืมลบของผมออกตอนใช้งานจริงนะครับ)
-GEMINI_API_KEY = "ใส่_API_KEY_ของคุณที่นี่" 
+GEMINI_API_KEY = "AIzaSyDvsHoM1Kvg4O8IP7uXZxfXO34DFTnRIi8" 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -269,4 +269,7 @@ if img_file is not None:
                 st.session_state.ai_data = None
                 st.session_state.is_submitted = False
                 st.rerun()
+
+
+
 

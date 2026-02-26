@@ -1,186 +1,298 @@
 import streamlit as st
-import google.generativeai as genai
+import pandas as pd
+import os
+from datetime import datetime
+import requests
 from PIL import Image
-import pandas as pd  
-import os            
-from datetime import datetime 
-import requests  
+import google.generativeai as genai
+import json
 
 # ==========================================
-# ตั้งค่า API ของ Gemini (สมอง AI)
+# 🔑 การตั้งค่า Gemini API
 # ==========================================
-# ⚠️ นำ API Key ของคุณมาใส่ตรงนี้ (แนะนำให้เปลี่ยนคีย์ใหม่หลังทดสอบเสร็จ)
-API_KEY = "AIzaSyDvsHoM1Kvg4O8IP7uXZxfXO34DFTnRIi8" 
-genai.configure(api_key=API_KEY)
-# เลือกใช้รุ่น Flash เพราะอ่านรูปเก่งและทำงานเร็วมาก
-ai_model = genai.GenerativeModel('gemini-1.5-flash')
+# ⚠️ เปลี่ยน API Key เป็นของคุณที่นี่
+GEMINI_API_KEY = "ใส่_API_KEY_ของคุณที่นี่" 
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # ==========================================
-# ส่วนที่ 1: การตั้งค่าหน้าเว็บ & ข้อมูลผู้รับการตรวจ
+# ส่วนที่ 1: การตั้งค่าหน้าเว็บ & ข้อมูลผู้ป่วย
 # ==========================================
-st.set_page_config(page_title="CKD AI Scanner", layout="centered")
+st.set_page_config(page_title="CKD Early Detection (Isan & AI)", layout="wide")
 
-st.title("🌾 ระบบคัดกรองโรคไตสำหรับเกษตรกรในจังหวัดสกลนคร")
-st.markdown("ใช้ Gemini AI วิเคราะห์แผ่นปัสสาวะ (โปรตีน, เลือด, น้ำตาล) พร้อมประเมินความเสี่ยง")
+st.title("🌾 ระบบคัดกรองโรคไตเชิงรุกด้วย AI (ฉบับสมบูรณ์)")
+st.markdown("ผสานการอ่านแผ่นปัสสาวะ 3 ค่า ด้วย AI เข้ากับการประเมินพฤติกรรมสุขภาพเชิงลึก")
 
-st.header("📋 1. ข้อมูลผู้รับการตรวจ (Risk Factors)")
-col1, col2 = st.columns(2)
+# จัด Layout ข้อมูลส่วนตัวให้อยู่ใน Expander เพื่อความเรียบร้อย
+with st.expander("📋 1. ข้อมูลทั่วไปของผู้รับการตรวจ", expanded=True):
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        age = st.number_input("อายุ (ปี)", min_value=1, max_value=120, value=45)
+    with c2:
+        gender = st.selectbox("เพศ", ["ชาย", "หญิง"])
+    with c3:
+        district = st.selectbox("📍 อำเภอที่ลงพื้นที่", 
+                                ["อำเภอเมืองสกลนคร", "อำเภอกุสุมาลย์", "อำเภอพรรณานิคม", "อำเภอพังโคน", "อื่นๆ"])
+
+st.markdown("### 🩺 2. แบบประเมินปัจจัยเสี่ยงโรคไต (Risk Factors)")
+st.info("กรุณาสอบถามประวัติผู้รับการตรวจให้ครบถ้วน เพื่อการคำนวณคะแนนที่แม่นยำ")
+
+col1, col2, col3 = st.columns(3)
+
 with col1:
-    age = st.number_input("อายุ (ปี)", min_value=1, max_value=120, value=45)
-    gender = st.selectbox("เพศ", ["ชาย", "หญิง"])
+    st.markdown("**ประวัติโรคประจำตัว:**")
+    has_diabetes = st.checkbox("🩸 โรคเบาหวาน (Diabetes)")              
+    has_hypertension = st.checkbox("💓 โรคความดันโลหิตสูง (Hypertension)")
+    has_gout = st.checkbox("🦴 โรคเกาต์ / กรดยูริกสูง (Gout)")
+    family_ckd = st.checkbox("👨‍👩‍👧 มีประวัติคนในครอบครัวเป็นโรคไต")
 
-district = st.selectbox("📍 เลือกอำเภอที่ลงพื้นที่", 
-                        ["อำเภอเมืองสกลนคร", "อำเภอกุสุมาลย์", "อำเภอพรรณานิคม", "อำเภอพังโคน", "อื่นๆ"])
+with col2:
+    st.markdown("**พฤติกรรมการใช้ยา:**")
+    nsaids_usage = st.radio("💊 การใช้ยาแก้ปวด (NSAIDs) / ยาชุด / ยาลูกกลอน:", 
+                            ["ไม่ค่อยกิน", "กินเป็นประจำ (มากกว่า 2 ครั้ง/สัปดาห์)"])
+    st.markdown("**พฤติกรรมสุขภาพ:**")
+    smoke_alcohol = st.checkbox("🚬 สูบบุหรี่ หรือ ดื่มสุราเป็นประจำ")
 
-st.markdown("**🩺 ปัจจัยเสี่ยงโรคไต:**")
-col3, col4 = st.columns(2)
 with col3:
-    has_diabetes = st.checkbox("โรคเบาหวาน")             
-    has_hypertension = st.checkbox("โรคความดันโลหิตสูง")
-    nsaids_usage = st.radio("การใช้ยาแก้ปวด/ยาชุด:", ["ไม่ค่อยกิน", "กินประจำ (มากกว่า 2 ครั้ง/สัปดาห์)"])
-
-with col4:
-    has_stones = st.checkbox("🪨 ประวัติโรคนิ่ว / ปัสสาวะขัด")
-    high_sodium = st.checkbox("🧂 ทานเค็มจัด / ปลาร้า / ผงชูรสเยอะ")
-    chemical_exposure = st.checkbox("🧪 สัมผัสสารเคมีเกษตรเป็นประจำ")
+    st.markdown("**บริบทเฉพาะถิ่น (วิถีชีวิตชาวเกษตรกร):**")
+    has_stones = st.checkbox("🪨 มีประวัติโรคนิ่วในไต / ปัสสาวะขัดบ่อยๆ")
+    high_sodium = st.checkbox("🧂 ทานอาหารรสเค็มจัด / ปลาร้า / ผงชูรสปริมาณมาก")
+    chemical_exposure = st.checkbox("🧪 สัมผัสสารเคมีทางการเกษตร (ยาฆ่าหญ้า/แมลง) เป็นประจำ")
 
 st.markdown("---")
 
 # ==========================================
 # ส่วนที่ 2: กล้องถ่ายภาพ
 # ==========================================
-st.header("📷 2. ถ่ายภาพแผ่นทดสอบ (Dipstick)")
-st.info("💡 ถือแผ่นตรวจให้เห็นแถบสีชัดเจนแล้วกดถ่ายภาพ")
+st.header("📷 3. ถ่ายภาพแผ่นทดสอบ (Dipstick)")
+st.info("💡 ถ่ายให้เห็นแถบสี 3 ค่าบนแผ่นทดสอบ (โปรตีน, เลือด, น้ำตาล) ชัดเจน AI จะทำการวิเคราะห์อัตโนมัติ")
 
-img_file = st.camera_input("📸 ถ่ายภาพแผ่นตรวจ")
+img_file = st.camera_input("📸 ถ่ายภาพแผ่นตรวจ (ไม่ต้องเล็งกรอบ)")
 
 # ==========================================
-# ส่วนที่ 3: ระบบ Gemini AI อ่านค่า 3 แถบ
+# ส่วนที่ 3: ให้ Gemini AI วิเคราะห์ภาพ
 # ==========================================
+# ใช้ Session State เพื่อเก็บค่า ไม่ให้ AI รันใหม่ทุกครั้งที่ผู้ใช้กดติ๊ก Checkbox
+if "ai_data" not in st.session_state:
+    st.session_state.ai_data = None
+
 if img_file is not None:
     st.markdown("---")
-    st.header("🧠 3. ผลการวิเคราะห์ด้วย Gemini AI")
+    st.header("🧠 4. ผลการวิเคราะห์สีแผ่นปัสสาวะโดย AI")
     
-    # เปิดรูปภาพเตรียมส่งให้ AI
-    image = Image.open(img_file)
-    st.image(image, caption="ภาพแผ่นตรวจที่ส่งให้ AI วิเคราะห์", use_container_width=True)
+    col_img, col_ai = st.columns([1, 2])
     
-    ai_result_text = ""
+    with col_img:
+        image = Image.open(img_file)
+        st.image(image, caption="ภาพที่รับเข้าสู่ระบบ AI", use_container_width=True)
     
-    with st.spinner("🤖 AI กำลังเพ่งมองแถบสีทั้ง 3 ค่า... กรุณารอสักครู่..."):
-        try:
-            # คำสั่ง (Prompt) ที่สั่งให้ AI ทำงาน
-            prompt = """
-            คุณคือแพทย์ผู้เชี่ยวชาญด้านการอ่านแผ่นตรวจปัสสาวะ (Urine Dipstick)
-            ในภาพนี้คือแผ่นตรวจ กรุณาวิเคราะห์แถบสี 3 ค่า เรียงจากบนลงล่าง:
-            1. โปรตีน (Protein)
-            2. เม็ดเลือดแดง (Blood)
-            3. น้ำตาล (Glucose)
-            
-            รูปแบบการตอบ:
-            - โปรตีน: [ตอบแค่ Negative, Trace, +1, +2, +3, หรือ +4]
-            - เม็ดเลือดแดง: [ตอบผลลัพธ์ที่เห็น]
-            - น้ำตาล: [ตอบผลลัพธ์ที่เห็น]
-            - สรุปคำแนะนำสั้นๆ 1 ประโยค
-            """
-            
-            # ส่งรูปและคำสั่งไปให้ Gemini
-            response = ai_model.generate_content([prompt, image])
-            ai_result_text = response.text
-            
-            st.success("✨ วิเคราะห์เสร็จสิ้น!")
-            st.markdown(f"> **คำตอบจาก AI:**\n\n{ai_result_text}")
-            
-        except Exception as e:
-            st.error(f"❌ เกิดข้อผิดพลาดในการเชื่อมต่อ AI: {e}")
-            st.stop() # หยุดการทำงานถ้าระบบ AI ล่ม
-
-    # ==========================================
-    # ส่วนที่ 4: ระบบวิเคราะห์ความเสี่ยงรวม
-    # ==========================================
-    st.markdown("---")
-    st.header("🚨 4. สรุปผลการประเมินความเสี่ยง")
-
-    # คำนวณคะแนนพื้นฐานจากข้อมูลผู้ป่วย
-    risk_score = 0
-    if age >= 60: risk_score += 1
-    if has_diabetes: risk_score += 2
-    if has_hypertension: risk_score += 1
-    if nsaids_usage == "กินประจำ (มากกว่า 2 ครั้ง/สัปดาห์)": risk_score += 2
-    if has_stones: risk_score += 2
-    if high_sodium: risk_score += 1
-    if chemical_exposure: risk_score += 1
-
-    # ดึงข้อมูลจากข้อความที่ AI ตอบมาเพื่อคิดคะแนนเพิ่ม (ดักจับคำ)
-    if "+1" in ai_result_text or "Trace" in ai_result_text:
-        risk_score += 2
-    if "+2" in ai_result_text or "+3" in ai_result_text or "+4" in ai_result_text:
-        risk_score += 4
-    if "เลือด" in ai_result_text and ("+" in ai_result_text or "Positive" in ai_result_text):
-        risk_score += 2 # ถ้ามีเลือดปน ให้บวกความเสี่ยงเพิ่ม
-
-    # ประเมินผลลัพธ์
-    if risk_score >= 7:
-        result_text, status_color, st_function = "ความเสี่ยงสูงมาก", "🔴", st.error
-    elif 4 <= risk_score <= 6:
-        result_text, status_color, st_function = "ความเสี่ยงปานกลาง", "🟡", st.warning
-    else:
-        result_text, status_color, st_function = "ความเสี่ยงต่ำ / ปกติ", "🟢", st.success
-
-    with st.container():
-        m1, m2 = st.columns(2)
-        m1.metric(label="คะแนนความเสี่ยงรวม", value=f"{risk_score} คะแนน")
-        with m2:
-            st.write("**สถานะปัจจุบัน**")
-            st.markdown(f"### {status_color} {result_text}")
-        st_function(f"ผลสรุป: {result_text}")
-
-    # ==========================================
-    # ส่วนที่ 5: บันทึกข้อมูลและเก็บภาพ
-    # ==========================================
-    st.markdown("---")
-    st.header("💾 5. บันทึกข้อมูล")
-    
-    if st.button("📥 บันทึกผลและเซฟรูปภาพเคสนี้"):
-        with st.spinner("กำลังจัดเก็บข้อมูล..."):
-            try:
-                # 1. เซฟรูปภาพ
-                if not os.path.exists("captured_images"):
-                    os.makedirs("captured_images")
-                
-                timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-                image_filename = f"dipstick_{timestamp_str}.jpg"
-                image_path = os.path.join("captured_images", image_filename)
-                
-                # บันทึกภาพที่ถ่ายไว้ด้วย PIL (สีไม่เพี้ยนแบบ OpenCV)
-                image.save(image_path)
-
-                # 2. บันทึกลง Local CSV
-                new_data = pd.DataFrame([{
-                    "วันที่เวลา": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "อำเภอ": district, "อายุ": age, "เพศ": gender,
-                    "คะแนนรวม": risk_score, "สถานะ": result_text,
-                    "ผลจาก AI": ai_result_text.replace("\n", " "), # เอาขึ้นบรรทัดใหม่ออกเพื่อให้ลง Excel สวยๆ
-                    "ชื่อไฟล์ภาพ": image_filename
-                }])
-                
-                if os.path.exists("ckd_database.csv"):
-                    new_data.to_csv("ckd_database.csv", mode='a', header=False, index=False)
-                else:
-                    new_data.to_csv("ckd_database.csv", index=False)
-
-                st.success(f"✅ บันทึกข้อมูลและภาพถ่าย ({image_filename}) สำเร็จ!")
-                st.balloons() 
+    with col_ai:
+        if st.session_state.ai_data is None:
+            with st.spinner("🤖 AI กำลังประมวลผล..."):
+                try:
+                    # Prompt บังคับให้ตอบเป็น JSON เพื่อง่ายต่อการดึงค่า
+                    prompt = """
+                    คุณคือผู้เชี่ยวชาญด้านเทคนิคการแพทย์ ตรวจสอบภาพแผ่นทดสอบปัสสาวะ (Dipstick) 3 ค่า
+                    ให้อ่านค่า 3 อย่างเรียงจากบนลงล่าง: Protein, Blood, Glucose
+                    ส่งคำตอบเป็น JSON รูปแบบนี้เท่านั้น ห้ามมีคำอธิบายอื่น:
+                    {
+                        "Protein": "Negative หรือ Trace หรือ +1 หรือ +2 หรือ +3 หรือ +4",
+                        "Blood": "Negative หรือ Trace หรือ +1 หรือ +2 หรือ +3 หรือ +4",
+                        "Glucose": "Negative หรือ Trace หรือ +1 หรือ +2 หรือ +3 หรือ +4",
+                        "Confidence": "ความมั่นใจ 1-100",
+                        "Note": "ข้อสังเกตสั้นๆ"
+                    }
+                    """
+                    response = model.generate_content([prompt, image])
                     
-            except Exception as e:
-                st.error(f"❌ เกิดข้อผิดพลาด: {e}")
+                    # ตัดแต่งข้อความเพื่อเอาแค่ JSON
+                    result_text = response.text.strip()
+                    if result_text.startswith("```json"):
+                        result_text = result_text[7:-3]
+                    elif result_text.startswith("```"):
+                        result_text = result_text[3:-3]
+                        
+                    st.session_state.ai_data = json.loads(result_text)
+                    st.rerun() 
+                except Exception as e:
+                    st.error(f"❌ AI ไม่สามารถอ่านค่าได้ กรุณาถ่ายภาพใหม่อีกครั้ง: {e}")
+                    st.stop()
+
+        # แสดงผลลัพธ์จาก AI
+        if st.session_state.ai_data:
+            ai_data = st.session_state.ai_data
+            st.success("✨ AI วิเคราะห์ภาพสำเร็จแล้ว!")
+            
+            m1, m2, m3 = st.columns(3)
+            m1.metric("🦠 Protein (โปรตีน)", ai_data.get("Protein", "N/A"))
+            m2.metric("🩸 Blood (เลือดปน)", ai_data.get("Blood", "N/A"))
+            m3.metric("🍬 Glucose (น้ำตาล)", ai_data.get("Glucose", "N/A"))
+            
+            st.caption(f"**ความมั่นใจของ AI:** {ai_data.get('Confidence', 'N/A')}% | **บันทึก AI:** {ai_data.get('Note', '')}")
+
+    # ==========================================
+    # ส่วนที่ 4: คำนวณความเสี่ยง (Advanced Risk Scoring)
+    # ==========================================
+    if st.session_state.ai_data:
+        st.markdown("---")
+        st.header("🚨 5. สรุปผลการประเมินความเสี่ยงโรคไต (CKD Risk Score)")
+        
+        risk_score = 0
+        
+        # 1. คะแนนจากประวัติสุขภาพพื้นฐาน (Max ~9)
+        if age >= 60: risk_score += 1
+        if has_diabetes: risk_score += 2
+        if has_hypertension: risk_score += 2
+        if has_gout: risk_score += 1
+        if family_ckd: risk_score += 2
+        if smoke_alcohol: risk_score += 1
+        
+        # 2. คะแนนจากวิถีชีวิตและการใช้ยา (Max ~4)
+        if nsaids_usage == "กินเป็นประจำ (มากกว่า 2 ครั้ง/สัปดาห์)": risk_score += 2
+        if has_stones: risk_score += 2
+        if high_sodium: risk_score += 1
+        if chemical_exposure: risk_score += 1
+
+        # 3. คะแนนจากผล AI ตรวจปัสสาวะ (Max ~7)
+        protein_val = ai_data.get("Protein", "Negative")
+        if "Trace" in protein_val or "+1" in protein_val: risk_score += 2
+        elif any(x in protein_val for x in ["+2", "+3", "+4"]): risk_score += 4
+            
+        blood_val = ai_data.get("Blood", "Negative")
+        if any(x in blood_val for x in ["Trace", "+1", "+2", "+3", "+4"]): risk_score += 2
+            
+        glucose_val = ai_data.get("Glucose", "Negative")
+        if any(x in glucose_val for x in ["Trace", "+1", "+2", "+3", "+4"]): risk_score += 1
+
+        # ประเมินเกณฑ์
+        if risk_score >= 8:
+            result_text, status_color = "ความเสี่ยงสูงมาก (High Risk)", "🔴"
+            advice = "🚨 **ต้องส่งต่อแพทย์ด่วน:** ควรได้รับการเจาะเลือดตรวจค่า eGFR และอัลตราซาวด์ไตโดยเร็วที่สุด"
+            st_msg = st.error
+        elif 4 <= risk_score <= 7:
+            result_text, status_color = "ความเสี่ยงปานกลาง (Moderate Risk)", "🟡"
+            advice = "⚠️ **ต้องปรับพฤติกรรม:** งดเค็ม งดยาชุด ดื่มน้ำให้เพียงพอ และนัดมาตรวจปัสสาวะซ้ำใน 2-4 สัปดาห์"
+            st_msg = st.warning
+        else:
+            result_text, status_color = "ความเสี่ยงต่ำ / ปกติ (Low Risk)", "🟢"
+            advice = "✅ **สุขภาพไตยังดี:** ให้รักษาพฤติกรรมสุขภาพ ดื่มน้ำสะอาดให้เพียงพอเวลาทำเกษตร"
+            st_msg = st.success
+
+        with st.container(border=True):
+            r1, r2 = st.columns([1, 2])
+            with r1:
+                st.metric(label="Total Risk Score", value=f"{risk_score} คะแนน")
+            with r2:
+                st.markdown(f"### {status_color} {result_text}")
+                st.write(advice)
+
+        # ==========================================
+        # ส่วนที่ 5: บันทึกข้อมูลและจัดเก็บรูปภาพ
+        # ==========================================
+        st.markdown("---")
+        st.header("💾 6. บันทึกข้อมูลเข้าระบบ")
+
+        # ล็อคปุ่มกันกดรัว
+        if "is_submitted" not in st.session_state:
+            st.session_state.is_submitted = False
+
+        if st.button("📥 ยืนยันผลและบันทึกข้อมูล", type="primary", use_container_width=True, disabled=st.session_state.is_submitted):
+            with st.spinner("กำลังบันทึกข้อมูลและเก็บภาพเข้าเซิร์ฟเวอร์..."):
+                try:
+                    # 1. จัดการเซฟรูปภาพลง Folder `captured_images`
+                    if not os.path.exists("captured_images"):
+                        os.makedirs("captured_images")
+                    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    image_filename = f"ckd_{timestamp_str}.jpg"
+                    image_path = os.path.join("captured_images", image_filename)
+                    image.save(image_path)
+
+                    # 2. บันทึกลง Local CSV
+                    new_data = pd.DataFrame([{
+                        "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "District": district, "Age": age, "Gender": gender,
+                        "DM": "Yes" if has_diabetes else "No",
+                        "HT": "Yes" if has_hypertension else "No",
+                        "Gout": "Yes" if has_gout else "No",
+                        "Family_CKD": "Yes" if family_ckd else "No",
+                        "NSAIDs": nsaids_usage,
+                        "Stones": "Yes" if has_stones else "No",
+                        "High_Sodium": "Yes" if high_sodium else "No",
+                        "Chemicals": "Yes" if chemical_exposure else "No",
+                        "AI_Protein": protein_val, "AI_Blood": blood_val, "AI_Glucose": glucose_val,
+                        "Total_Score": risk_score, "Result": result_text,
+                        "Image_File": image_filename
+                    }])
+                    
+                    file_name = "ckd_database.csv"
+                    if os.path.exists(file_name):
+                        new_data.to_csv(file_name, mode='a', header=False, index=False)
+                    else:
+                        new_data.to_csv(file_name, index=False)
+
+                    # 3. ส่งข้อมูลขึ้น Google Forms (ใช้ Entry เดิมของคุณ)
+                    FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdmHo3tH30h7iOe0ckfoktY6aPk_R7eTAbunYy0dbqXNOWPoQ/formResponse"
+                    form_data = {
+                        "entry.226071067": str(district), 
+                        "entry.1224620038": str(age), 
+                        "entry.1030234450": str(gender),
+                        "entry.853278913": "เป็น" if has_diabetes else "ไม่เป็น", 
+                        "entry.1930442439": "เป็น" if has_hypertension else "ไม่เป็น",
+                        "entry.853069744": str(nsaids_usage), 
+                        "entry.643930526": f"PRO:{protein_val}, BLD:{blood_val}, GLU:{glucose_val}", # รวมค่า AI ไปในช่องเดียว
+                        "entry.19531897": str(risk_score), 
+                        "entry.1594709429": str(result_text)
+                    }
+                    response = requests.post(FORM_URL, data=form_data)
+                    
+                    if response.status_code == 200:
+                        st.session_state.is_submitted = True 
+                        st.success("✅ บันทึกข้อมูลและรูปภาพสำเร็จ!")
+                    else:
+                        st.error(f"❌ Google Forms แจ้งเตือน: {response.status_code}")
+                        
+                except Exception as e:
+                    st.error(f"❌ ระบบขัดข้อง: {e}")
+
+        # ปุ่มเคลียร์หน้าจอเริ่มคนใหม่
+        if st.session_state.is_submitted:
+            if st.button("🔄 เริ่มตรวจผู้รับบริการคนต่อไป", use_container_width=True):
+                st.session_state.ai_data = None
+                st.session_state.is_submitted = False
+                st.rerun()
 
 # ==========================================
-# Dashboard สถิติ
+# ส่วนเสริม: Dashboard ข้อมูลในพื้นที่
 # ==========================================
 st.markdown("---")
-if os.path.exists("ckd_database.csv"):
-    df = pd.read_csv("ckd_database.csv")
-    with st.expander("ดูตารางข้อมูลที่บันทึกไว้"):
-        st.dataframe(df)
-
+with st.expander("📊 เปิดดู Dashboard สถิติผู้เข้ารับการคัดกรอง", expanded=False):
+    if os.path.exists("ckd_database.csv"):
+        df = pd.read_csv("ckd_database.csv")
+        st.dataframe(df, use_container_width=True)
+            
+        c_chart1, c_chart2 = st.columns(2)
+        with c_chart1:
+            st.subheader("📈 จำนวนผู้มีความเสี่ยงแยกตามอำเภอ")
+            risk_df = df[df["Result"].str.contains("High Risk|Moderate Risk", na=False)]
+            if not risk_df.empty:
+                st.bar_chart(risk_df["District"].value_counts())
+            else:
+                st.info("ยังไม่พบผู้มีความเสี่ยง")
+                
+        with c_chart2:
+            st.subheader("⚠️ ปัจจัยเสี่ยงที่พบมากที่สุด (จำนวนเคส)")
+            risk_factors = {
+                "กินเค็ม/ปลาร้า": (df["High_Sodium"] == "Yes").sum(),
+                "ใช้ยาชุด/NSAIDs": (df["NSAIDs"] == "กินเป็นประจำ (มากกว่า 2 ครั้ง/สัปดาห์)").sum(),
+                "สัมผัสสารเคมี": (df["Chemicals"] == "Yes").sum(),
+                "โรคนิ่ว": (df["Stones"] == "Yes").sum()
+            }
+            st.bar_chart(pd.Series(risk_factors))
+            
+        if st.button("🗑️ ล้างข้อมูลทดสอบทั้งหมด", type="secondary"):
+            os.remove("ckd_database.csv")
+            st.session_state.ai_data = None
+            st.session_state.is_submitted = False
+            st.rerun()
+    else:
+        st.info("ยังไม่มีข้อมูลในระบบ กราฟจะแสดงผลเมื่อมีการบันทึกเคสแรกครับ")

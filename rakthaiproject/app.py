@@ -405,6 +405,8 @@ if selected == "คัดกรองใหม่":
                         # ส่งข้อมูลไป Google Forms
                         FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdmHo3tH30h7iOe0ckfoktY6aPk_R7eTAbunYy0dbqXNOWPoQ/formResponse"
                         form_data = {
+                            "entry.900905480": str(patient_id), 
+                            "entry.1756715937": str(name),
                             "entry.226071067": str(district),
                             "entry.1224620038": str(age),
                             "entry.1030234450": str(gender),
@@ -545,6 +547,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

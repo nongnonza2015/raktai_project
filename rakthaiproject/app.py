@@ -87,7 +87,7 @@ if os.path.exists("ckd_database.csv"):
         
         if os.path.exists("ckd_database.csv"):
     df_check = pd.read_csv("ckd_database.csv")
-    if "Next_Appointment" in df_check.columns:
+        if "Next_Appointment" in df_check.columns:
         df_check['Next_Appointment'] = pd.to_datetime(df_check['Next_Appointment'])
         
         # ค้นหาคนที่มีนัด "พรุ่งนี้"
@@ -355,7 +355,7 @@ if selected == "คัดกรองใหม่":
                             "AI_Results": all_ai_results,
                             "Total_Score": risk_score,
                             "Result": result_text,
-                            "Image_File": image_filename
+                            "Image_File": image_filename,
                             "Next_Appointment": next_appointment.strftime("%Y-%m-%d") if next_appointment else ""
                         }])
                         
@@ -382,7 +382,7 @@ if selected == "คัดกรองใหม่":
                             "entry.1993082703": "เป็น" if has_stones else "ไม่เป็น",
                             "entry.1517620614": "เป็น" if high_sodium else "ไม่เป็น",
                             "entry.1278780738": "เป็น" if chemical_exposure else "ไม่เป็น"
-                            "entry.1539499878": str(next_appointment) if next_appointment else
+                            "entry.1539499878": str(next_appointment) if next_appointment else ""
                         }
                         response = requests.post(FORM_URL, data=form_data)
                         
@@ -506,6 +506,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

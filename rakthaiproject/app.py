@@ -31,7 +31,33 @@ except KeyError:
     st.stop()
     
 model = genai.GenerativeModel("gemini-1.5-flash")
+# ===== ส่วนระบบแจ้งเตือนนัดหมายล่วงหน้า (Notification Center) =====
+if os.path.exists("ckd_database.csv"):
+    try:
+        df_notify = pd.read_csv("ckd_database.csv")
+        if "Next_Appointment" in df_notify.columns:
+            # แปลงข้อมูลวันที่ และคัดกรองเฉพาะที่มีวันนัด
+            df_notify['Next_Appointment'] = pd.to_datetime(df_notify['Next_Appointment'])
+            today = datetime.now().date()
+            
+            # แจ้งเตือนล่วงหน้า 3 วัน
+            upcoming_days = 3
+            alert_date = today + pd.Timedelta(days=upcoming_days)
+            
+            # กรองหารายชื่อที่ถึงกำหนด (ตั้งแต่วันนี้ ถึง อีก 3 วันข้างหน้า)
+            mask = (df_notify['Next_Appointment'].dt.date >= today) & \
+                   (df_notify['Next_Appointment'].dt.date <= alert_date)
+            upcoming_list = df_notify[mask]
 
+            if not upcoming_list.empty:
+                st.info(f"🔔 **ระบบแจ้งเตือน:** พบเกษตรกรที่มีนัดตรวจในอีก {upcoming_days} วันข้างหน้า")
+                with st.expander("ดูรายชื่อผู้รับการตรวจที่มีนัดหมาย"):
+                    for _, row in upcoming_list.iterrows():
+                        appt_date = row['Next_Appointment'].strftime('%d/%m/%Y')
+                        st.warning(f"👤 **{row['Name']}** | 📞 {row['Patient_ID']} | 🗓️ นัดวันที่: **{appt_date}**")
+    except:
+        pass 
+        
 # ===== Main Content Based on Menu Selection =====
 if selected == "คัดกรองใหม่":
     st.title("🌾 ระบบคัดกรองโรคไตเชิงรุกด้วย AI สำหรับเกษตรกรในจังหวัดสกลนคร")
@@ -240,6 +266,16 @@ if selected == "คัดกรองใหม่":
                     
             st.markdown("---")
             
+            st.subheader("📅 5.1 นัดหมายติดตามผล (ถ้ามี)")
+            next_appointment = st.date_input(
+                "เลือกวันที่หมอนัดครั้งถัดไป", 
+                value=None, 
+                min_value=datetime.now(),
+                help="หากมีการนัดตรวจซ้ำหรือส่งต่อโรงพยาบาล ให้ระบุวันที่ที่นี่"
+            )
+            
+            # 💾 6. บันทึกข้อมูลเข้าระบบ
+            st.header("💾 6. บันทึกข้อมูลเข้าระบบ")
             # 💾 6. บันทึกข้อมูลเข้าระบบ
             st.header("💾 6. บันทึกข้อมูลเข้าระบบ")
             if "is_submitted" not in st.session_state:
@@ -276,6 +312,7 @@ if selected == "คัดกรองใหม่":
                             "Total_Score": risk_score,
                             "Result": result_text,
                             "Image_File": image_filename
+                            "Next_Appointment": next_appointment.strftime("%Y-%m-%d") if next_appointment else ""
                         }])
                         
                         file_name = "ckd_database.csv"
@@ -301,6 +338,7 @@ if selected == "คัดกรองใหม่":
                             "entry.1993082703": "เป็น" if has_stones else "ไม่เป็น",
                             "entry.1517620614": "เป็น" if high_sodium else "ไม่เป็น",
                             "entry.1278780738": "เป็น" if chemical_exposure else "ไม่เป็น"
+                            "entry.1539499878": str(next_appointment) if next_appointment else
                         }
                         response = requests.post(FORM_URL, data=form_data)
                         
@@ -424,3 +462,4 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+

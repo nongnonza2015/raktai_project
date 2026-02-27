@@ -13,7 +13,7 @@ st.set_page_config(page_title="CKD Early Detection (Isan & AI)", layout="wide")
 
 # ===== Sidebar and Menu =====
 with st.sidebar:
-    st.title("🩺 CKD AI Isan")
+    st.title("🩺 RAITAI AI")
     selected = option_menu(
         menu_title="เมนูหลัก",
         options=["คัดกรองใหม่", "ประวัติ/ติดตามผล", "สถิติภาพรวม"],
@@ -22,13 +22,17 @@ with st.sidebar:
     )
     st.markdown("---")
     st.warning("⚠️ **Disclaimer:** ระบบคัดกรองเบื้องต้นเท่านั้น ไม่ใช่การวินิจฉัยโดยแพทย์")
+
+# Configure AI model (Gemini)
+# Configure AI model (Gemini)
+# ดึง API Key จากความลับของ Streamlit แทนการฝังในโค้ด
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
 except KeyError:
     st.error("🚨 ไม่พบ API Key! กรุณาตรวจสอบไฟล์ .streamlit/secrets.toml (สำหรับรันในเครื่อง) หรือตั้งค่า Secrets ใน Streamlit Cloud")
     st.stop()
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("models/gemini-1.5-pro")
 
 # ===== Main Content Based on Menu Selection =====
 if selected == "คัดกรองใหม่":
@@ -407,4 +411,3 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
-

@@ -8,6 +8,7 @@ import google.generativeai as genai
 import json
 import re
 from streamlit_option_menu import option_menu
+from datetime import date
 
 def send_line_message(message_text):
     try:
@@ -436,7 +437,7 @@ elif selected == "ประวัติ/ติดตามผล":
     search_id = st.text_input("🔍 ค้นหาด้วยเบอร์โทรศัพท์", placeholder="เช่น 0812345678")
     
     if search_id:
-       if not df_main.empty:
+        if not df_main.empty:
             df = df_main.copy()
             patient_data = df[df['Patient_ID'].astype(str) == search_id]
             patient_data = patient_data.sort_values(by='Date')
@@ -481,7 +482,7 @@ elif selected == "ประวัติ/ติดตามผล":
                     st.dataframe(patient_data[['Date', 'Total_Score', 'Result', 'AI_Results']], use_container_width=True)
             else:
                 st.warning("❌ ไม่พบข้อมูลสำหรับเบอร์โทรศัพท์นี้")
-    else:
+        else:
             st.info("ℹ️ ยังไม่มีข้อมูลบันทึกในระบบ")
 
 elif selected == "สถิติภาพรวม":
@@ -539,5 +540,6 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 

@@ -5,6 +5,5 @@ numpy
 Pillow
 pandas
 requests
-google-generativeai
+google-generativeai>=0.4.1
 streamlit-option-menu
-

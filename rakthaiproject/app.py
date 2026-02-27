@@ -82,23 +82,30 @@ if os.path.exists("ckd_database.csv"):
                     for _, row in upcoming_list.iterrows():
                         appt_date = row['Next_Appointment'].strftime('%d/%m/%Y')
                         st.warning(f"👤 **{row['Name']}** | 📞 {row['Patient_ID']} | 🗓️ นัดวันที่: **{appt_date}**")
-    except:
-        pass 
-        
-        if os.path.exists("ckd_database.csv"):
+   except Exception as e:
+    st.error(f"อ่านข้อมูลแจ้งเตือนไม่ได้: {e}")
+
+# ===== แจ้งเตือนนัดพรุ่งนี้ =====
+if os.path.exists("ckd_database.csv"):
     df_check = pd.read_csv("ckd_database.csv")
-        if "Next_Appointment" in df_check.columns:
-        df_check['Next_Appointment'] = pd.to_datetime(df_check['Next_Appointment'])
-        
-        # ค้นหาคนที่มีนัด "พรุ่งนี้"
+
+    if "Next_Appointment" in df_check.columns:
+        df_check['Next_Appointment'] = pd.to_datetime(df_check['Next_Appointment'], errors="coerce")
         tomorrow = datetime.now().date() + pd.Timedelta(days=1)
+
         upcoming_patients = df_check[df_check['Next_Appointment'].dt.date == tomorrow]
-        
+
         if not upcoming_patients.empty:
             st.warning(f"🔔 พรุ่งนี้มีนัดตรวจ {len(upcoming_patients)} ราย")
+
             if st.button("📲 ส่งข้อความแจ้งเตือนเข้า LINE เจ้าหน้าที่"):
                 for _, row in upcoming_patients.iterrows():
-                    msg = f"⏰ แจ้งเตือนนัดหมายพรุ่งนี้\n👤 คุณ: {row['Name']}\n📍 พื้นที่: {row['District']}\n📞 โทร: {row['Patient_ID']}"
+                    msg = (
+                        f"⏰ แจ้งเตือนนัดหมายพรุ่งนี้\n"
+                        f"👤 คุณ: {row['Name']}\n"
+                        f"📍 พื้นที่: {row['District']}\n"
+                        f"📞 โทร: {row['Patient_ID']}"
+                    )
                     status = send_line_message(msg)
                     if status == 200:
                         st.success(f"ส่งเตือนคุณ {row['Name']} เรียบร้อย!")
@@ -381,7 +388,7 @@ if selected == "คัดกรองใหม่":
                             "entry.1594709429": str(result_text),
                             "entry.1993082703": "เป็น" if has_stones else "ไม่เป็น",
                             "entry.1517620614": "เป็น" if high_sodium else "ไม่เป็น",
-                            "entry.1278780738": "เป็น" if chemical_exposure else "ไม่เป็น"
+                            "entry.1278780738": "เป็น" if chemical_exposure else "ไม่เป็น",
                             "entry.1539499878": str(next_appointment) if next_appointment else ""
                         }
                         response = requests.post(FORM_URL, data=form_data)
@@ -506,6 +513,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

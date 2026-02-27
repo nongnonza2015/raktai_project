@@ -9,6 +9,49 @@ import json
 import re
 from streamlit_option_menu import option_menu
 
+def send_line_message(message_text):
+    LINE_ACCESS_TOKEN = "05914a54947367b96571441c28c01b4d"
+    
+    TARGET_ID = "2009263218"
+    
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LINE_ACCESS_TOKEN}"
+    }
+    payload = {
+        "to": TARGET_ID,
+        "messages": [
+            {
+                "type": "text",
+                "text": message_text
+            }
+        ]
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        return response.status_code
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+        
+        if os.path.exists("ckd_database.csv"):
+    df_check = pd.read_csv("ckd_database.csv")
+    if "Next_Appointment" in df_check.columns:
+        df_check['Next_Appointment'] = pd.to_datetime(df_check['Next_Appointment'])
+        
+        # ค้นหาคนที่มีนัด "พรุ่งนี้"
+        tomorrow = datetime.now().date() + pd.Timedelta(days=1)
+        upcoming_patients = df_check[df_check['Next_Appointment'].dt.date == tomorrow]
+        
+        if not upcoming_patients.empty:
+            st.warning(f"🔔 พรุ่งนี้มีนัดตรวจ {len(upcoming_patients)} ราย")
+            if st.button("📲 ส่งข้อความแจ้งเตือนเข้า LINE เจ้าหน้าที่"):
+                for _, row in upcoming_patients.iterrows():
+                    msg = f"⏰ แจ้งเตือนนัดหมายพรุ่งนี้\n👤 คุณ: {row['Name']}\n📍 พื้นที่: {row['District']}\n📞 โทร: {row['Patient_ID']}"
+                    status = send_line_message(msg)
+                    if status == 200:
+                        st.success(f"ส่งเตือนคุณ {row['Name']} เรียบร้อย!")
 st.set_page_config(page_title="CKD Early Detection (Isan & AI)", layout="wide")
 
 # ===== Sidebar and Menu =====
@@ -462,4 +505,5 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 

@@ -481,7 +481,7 @@ elif selected == "ประวัติ/ติดตามผล":
                     st.dataframe(patient_data[['Date', 'Total_Score', 'Result', 'AI_Results']], use_container_width=True)
             else:
                 st.warning("❌ ไม่พบข้อมูลสำหรับเบอร์โทรศัพท์นี้")
-        else:
+    else:
             st.info("ℹ️ ยังไม่มีข้อมูลบันทึกในระบบ")
 
 elif selected == "สถิติภาพรวม":

@@ -364,8 +364,8 @@ if selected == "คัดกรองใหม่":
                 
             if st.button("📥 ยืนยันผลและบันทึกข้อมูล", type="primary", use_container_width=True, disabled=st.session_state.is_submitted):
                 if len(patient_id) != 10 or not patient_id.isdigit():
-        st.warning("⚠️ กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก และเป็นตัวเลขเท่านั้นครับ")
-        st.stop()
+                    st.warning("⚠️ กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก และเป็นตัวเลขเท่านั้นครับ")
+                    st.stop()
                 with st.spinner("กำลังบันทึกข้อมูลและเก็บภาพเข้าเซิร์ฟเวอร์..."):
                     try:
                         if not os.path.exists("captured_images"):
@@ -549,6 +549,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

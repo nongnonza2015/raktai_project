@@ -11,22 +11,41 @@ from streamlit_option_menu import option_menu
 
 def send_line_message(message_text):
     try:
+        # ดึง Token และ User ID จากระบบ Secrets
+        LINE_CHANNEL_ACCESS_TOKEN = st.secrets.get("LINE_CHANNEL_ACCESS_TOKEN", "")
+        LINE_USER_ID = st.secrets.get("LINE_USER_ID", "") # ไอดีของคนที่ต้องการให้ส่งไปหา
         
-        LINE_TOKEN = st.secrets.get("LINE_NOTIFY_TOKEN", "") 
-        if not LINE_TOKEN:
-            st.error("🚨 ไม่พบ LINE_NOTIFY_TOKEN ในการตั้งค่า Secrets!")
+        if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
+            st.error("🚨 ไม่พบ Token หรือ User ID ของ LINE OA ในการตั้งค่า Secrets!")
             return 400
             
-        url = "https://notify-api.line.me/api/notify"
-        headers = {'Authorization': f'Bearer {LINE_TOKEN}'}
-        data = {'message': message_text}
+        url = "https://api.line.me/v2/bot/message/push"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
+        }
         
-        # ยิง API ไปที่ LINE Notify
-        response = requests.post(url, headers=headers, data=data)
+        # รูปแบบข้อมูลสำหรับส่งผ่าน LINE Messaging API
+        data = {
+            "to": LINE_USER_ID,
+            "messages": [
+                {
+                    "type": "text",
+                    "text": message_text
+                }
+            ]
+        }
+        
+        # ยิง API
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        
+        if response.status_code != 200:
+            st.error(f"⚠️ ส่ง LINE ไม่สำเร็จ (Status: {response.status_code}) - {response.text}")
+            
         return response.status_code
         
     except Exception as e:
-        st.error(f"❌ เกิดข้อผิดพลาดในการส่ง LINE: {e}")
+        st.error(f"❌ เกิดข้อผิดพลาดในการส่ง LINE OA: {e}")
         return 500
         
     LINE_ACCESS_TOKEN = "05914a54947367b96571441c28c01b4d"
@@ -541,6 +560,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

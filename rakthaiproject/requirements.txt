@@ -6,3 +6,4 @@ Pillow
 pandas
 requests
 google-generativeai
+streamlit-option-menu

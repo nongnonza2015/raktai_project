@@ -70,11 +70,17 @@ except KeyError:
     st.stop()
     
 model = genai.GenerativeModel("gemini-2.0-flash")
+# ===== 💾 โหลดฐานข้อมูลหลักเพียงครั้งเดียว (Global Data Load) =====
+DB_FILE = "ckd_database.csv"
+if os.path.exists(DB_FILE):
+    df_main = pd.read_csv(DB_FILE)
+else:
+    df_main = pd.DataFrame() # ถ้ายังไม่มีไฟล์ ให้สร้างตารางว่างๆ เตรียมไว้
 
 # ===== ส่วนระบบแจ้งเตือนนัดหมายล่วงหน้า (Notification Center) =====
-if os.path.exists("ckd_database.csv"):
+if not df_main.empty:
     try:
-        df_notify = pd.read_csv("ckd_database.csv")
+        df_notify = df_main.copy()
         if "Next_Appointment" in df_notify.columns:
             # 1. เพิ่ม errors="coerce" เพื่อบอกว่าถ้าเจอค่าว่างหรือวันที่แปลกๆ ให้เปลี่ยนเป็นค่า NaT แทนการ Error
             df_notify['Next_Appointment'] = pd.to_datetime(df_notify['Next_Appointment'], errors="coerce")
@@ -104,8 +110,8 @@ if os.path.exists("ckd_database.csv"):
         st.error(f"อ่านข้อมูลแจ้งเตือนไม่ได้: {e}")
 
 # ===== แจ้งเตือนนัด 'พรุ่งนี้' + ส่ง LINE =====
-if os.path.exists("ckd_database.csv"):
-    df_check = pd.read_csv("ckd_database.csv")
+if not df_main.empty:
+    df_check = df_main.copy()
 
     if "Next_Appointment" in df_check.columns:
         df_check['Next_Appointment'] = pd.to_datetime(
@@ -238,7 +244,6 @@ if selected == "คัดกรองใหม่":
                                 st.error("❌ ภาพถ่ายไม่ชัดเจนหรือไม่ใช่แผ่นตรวจปัสสาวะ")
                             else:
                                 st.session_state.ai_data = result
-                                st.rerun()
                         else:
                             st.error("❌ AI ไม่สามารถสร้างข้อมูลรูปแบบ JSON ได้")
                     except Exception as e:
@@ -434,8 +439,8 @@ elif selected == "ประวัติ/ติดตามผล":
     search_id = st.text_input("🔍 ค้นหาด้วยเบอร์โทรศัพท์", placeholder="เช่น 0812345678")
     
     if search_id:
-        if os.path.exists("ckd_database.csv"):
-            df = pd.read_csv("ckd_database.csv")
+       if not df_main.empty:
+            df = df_main.copy()
             patient_data = df[df['Patient_ID'].astype(str) == search_id]
             patient_data = patient_data.sort_values(by='Date')
             
@@ -486,8 +491,8 @@ elif selected == "สถิติภาพรวม":
     st.subheader("📊 Dashboard: ภาพรวมสุขภาพไตเกษตรกร")
     file_name = "ckd_database.csv"
     
-    if os.path.exists(file_name):
-        df = pd.read_csv(file_name)
+    if not df_main.empty:
+        df = df_main.copy()
         if not df.empty:
             m1, m2, m3 = st.columns(3)
             m1.metric("👥 จำนวนผู้ตรวจทั้งหมด", f"{len(df)} ราย")
@@ -537,6 +542,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

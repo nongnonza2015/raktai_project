@@ -124,20 +124,16 @@ if selected == "คัดกรองใหม่":
     "Note": "ข้อสังเกตสั้นๆ"
 }
 """
-                        try:
+try:
     response = model.generate_content([prompt, image])
-
     if not response or not response.text:
         st.error("❌ AI ไม่ตอบกลับ")
         st.stop()
-
     json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
     if not json_match:
         st.error("❌ AI ตอบกลับไม่อยู่ในรูปแบบ JSON")
         st.stop()
-
     st.session_state.ai_data = json.loads(json_match.group(0))
-
     st.rerun()
 
 except json.JSONDecodeError:
@@ -427,5 +423,6 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 

@@ -22,10 +22,7 @@ with st.sidebar:
     )
     st.markdown("---")
     st.warning("⚠️ **Disclaimer:** ระบบคัดกรองเบื้องต้นเท่านั้น ไม่ใช่การวินิจฉัยโดยแพทย์")
-
-# Configure AI model (Gemini)
-# Configure AI model (Gemini)
-# ดึง API Key จากความลับของ Streamlit แทนการฝังในโค้ด
+    
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
@@ -136,13 +133,13 @@ try:
     st.session_state.ai_data = json.loads(json_match.group(0))
     st.rerun()
 
-except json.JSONDecodeError:
-    st.error("❌ JSON ไม่ถูกต้อง")
-    st.stop()
-
-except Exception as e:
-    st.error(f"❌ เกิดข้อผิดพลาด: {e}")
-    st.stop()
+    except json.JSONDecodeError:
+        st.error("❌ JSON ไม่ถูกต้อง")
+        st.stop()
+    
+    except Exception as e:
+        st.error(f"❌ เกิดข้อผิดพลาด: {e}")
+        st.stop()
             if st.session_state.ai_data:
                 ai_data = st.session_state.ai_data
                 st.success("✨ AI วิเคราะห์ภาพสำเร็จแล้ว!")
@@ -423,6 +420,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

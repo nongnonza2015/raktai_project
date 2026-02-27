@@ -435,8 +435,7 @@ if selected == "คัดกรองใหม่":
                         
             if st.session_state.is_submitted:
                 if st.button("🔄 เริ่มตรวจผู้รับบริการคนต่อไป", use_container_width=True):
-                    st.session_state.ai_data = None
-                    st.session_state.is_submitted = False
+                    st.session_state.clear()
                     st.rerun()
 
 elif selected == "ประวัติ/ติดตามผล":
@@ -547,6 +546,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

@@ -13,7 +13,7 @@ st.set_page_config(page_title="CKD Early Detection (Isan & AI)", layout="wide")
 
 # ===== Sidebar and Menu =====
 with st.sidebar:
-    st.title("🩺RAKTAI AI")
+    st.title("🩺 CKD AI Isan")
     selected = option_menu(
         menu_title="เมนูหลัก",
         options=["คัดกรองใหม่", "ประวัติ/ติดตามผล", "สถิติภาพรวม"],
@@ -32,7 +32,7 @@ try:
 except KeyError:
     st.error("🚨 ไม่พบ API Key! กรุณาตรวจสอบไฟล์ .streamlit/secrets.toml (สำหรับรันในเครื่อง) หรือตั้งค่า Secrets ใน Streamlit Cloud")
     st.stop()
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("models/gemini-1.5-pro")
 
 # ===== Main Content Based on Menu Selection =====
 if selected == "คัดกรองใหม่":
@@ -106,12 +106,19 @@ if selected == "คัดกรองใหม่":
                 with st.spinner("🤖 AI กำลังประมวลผล..."):
                     try:
                         prompt = """
-คุณคือผู้เชี่ยวชาญด้านเทคนิคการแพทย์ ตรวจสอบภาพแผ่นทดสอบปัสสาวะ (Dipstick) 3 ค่า
-ให้อ่านค่า 3 อย่างเรียงจากบนลงล่าง: Protein, Blood, Glucose
+คุณคือผู้เชี่ยวชาญด้านเทคนิคการแพทย์ ตรวจสอบภาพแผ่นทดสอบปัสสาวะ (Dipstick) แบบ 10 ค่า
+ให้อ่านค่าเรียงตามลำดับมาตรฐาน ดังนี้: Leukocytes, Nitrite, Urobilinogen, Protein, pH, Blood, Specific Gravity (SG), Ketones, Bilirubin, Glucose
 ส่งคำตอบเป็น JSON รูปแบบนี้เท่านั้น:
 {
+    "Leukocytes": "Negative หรือ +1 ถึง +3",
+    "Nitrite": "Negative หรือ Positive",
+    "Urobilinogen": "Normal หรือ ระบุค่า",
     "Protein": "Negative หรือ Trace หรือ +1 ถึง +4",
+    "pH": "5.0 ถึง 8.5",
     "Blood": "Negative หรือ Trace หรือ +1 ถึง +4",
+    "SG": "1.000 ถึง 1.030",
+    "Ketones": "Negative หรือ Trace หรือ +1 ถึง +4",
+    "Bilirubin": "Negative หรือ +1 ถึง +3",
     "Glucose": "Negative หรือ Trace หรือ +1 ถึง +4",
     "Confidence": "ความมั่นใจ 1-100",
     "Note": "ข้อสังเกตสั้นๆ"
@@ -127,11 +134,21 @@ if selected == "คัดกรองใหม่":
             if st.session_state.ai_data:
                 ai_data = st.session_state.ai_data
                 st.success("✨ AI วิเคราะห์ภาพสำเร็จแล้ว!")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("🦠 Protein (โปรตีน)", ai_data.get("Protein", "N/A"))
-                m2.metric("🩸 Blood (เลือดปน)", ai_data.get("Blood", "N/A"))
-                m3.metric("🍬 Glucose (น้ำตาล)", ai_data.get("Glucose", "N/A"))
-                st.caption(f"**ความมั่นใจของ AI:** {ai_data.get('Confidence', 'N/A')}% | **บันทึก AI:** {ai_data.get('Note', '')}")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("🦠 LEU (เม็ดเลือดขาว)", ai_data.get("Leukocytes", "N/A"))
+        col2.metric("🧪 NIT (ติดเชื้อ)", ai_data.get("Nitrite", "N/A"))
+        col3.metric("🟡 URO (ตับ/ดีซ่าน)", ai_data.get("Urobilinogen", "N/A"))
+        col4.metric("🥩 PRO (โปรตีน)", ai_data.get("Protein", "N/A"))
+        col5.metric("⚖️ pH (กรด-ด่าง)", ai_data.get("pH", "N/A"))
+
+        col6, col7, col8, col9, col10 = st.columns(5)
+        col6.metric("🩸 BLD (เลือด)", ai_data.get("Blood", "N/A"))
+        col7.metric("💧 SG (ความเข้มข้น)", ai_data.get("SG", "N/A"))
+        col8.metric("🔥 KET (คีโตน)", ai_data.get("Ketones", "N/A"))
+        col9.metric("🟤 BIL (บิลิรูบิน)", ai_data.get("Bilirubin", "N/A"))
+        col10.metric("🍬 GLU (น้ำตาล)", ai_data.get("Glucose", "N/A"))
+
+        st.caption(f"**ความมั่นใจของ AI:** {ai_data.get('Confidence', 'N/A')}% | **บันทึก AI:** {ai_data.get('Note', '')}")
 
         # 🚨 5. คำนวณความเสี่ยง (Advanced Risk Scoring)
         if st.session_state.ai_data:
@@ -158,6 +175,16 @@ if selected == "คัดกรองใหม่":
             if any(x in blood_val for x in ["Trace", "+1", "+2", "+3", "+4"]): risk_score += 2
             glucose_val = ai_data.get("Glucose", "Negative")
             if any(x in glucose_val for x in ["Trace", "+1", "+2", "+3", "+4"]): risk_score += 1
+            sg_val = ai_data.get("SG", "1.010")
+            # ถ้า SG สูงกว่า 1.025 แปลว่าดื่มน้ำน้อยมาก เสี่ยงโรคไตและนิ่ว
+            if isinstance(sg_val, str) and ("1.025" in sg_val or "1.030" in sg_val): 
+                risk_score += 1 
+
+            leu_val = ai_data.get("Leukocytes", "Negative")
+            nit_val = ai_data.get("Nitrite", "Negative")
+            # ถ้าพบเม็ดเลือดขาวหรือไนไตรต์ แปลว่าอาจมีกระเพาะปัสสาวะอักเสบ/ติดเชื้อ
+            if "Positive" in nit_val or any(x in leu_val for x in ["Trace", "+1", "+2", "+3"]): 
+                risk_score += 1
             # ประเมินเกณฑ์
             if risk_score >= 8:
                 result_text, status_color = "ความเสี่ยงสูงมาก (High Risk)", "🔴"
@@ -206,6 +233,7 @@ if selected == "คัดกรองใหม่":
                         image_filename = f"ckd_{timestamp_str}.jpg"
                         image_path = os.path.join("captured_images", image_filename)
                         image.save(image_path)
+                        all_ai_results = f"LEU:{ai_data.get('Leukocytes','')}, NIT:{ai_data.get('Nitrite','')}, URO:{ai_data.get('Urobilinogen','')}, PRO:{ai_data.get('Protein','')}, pH:{ai_data.get('pH','')}, BLD:{ai_data.get('Blood','')}, SG:{ai_data.get('SG','')}, KET:{ai_data.get('Ketones','')}, BIL:{ai_data.get('Bilirubin','')}, GLU:{ai_data.get('Glucose','')}"
                         new_data = pd.DataFrame([{
                             "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                             "Patient_ID": str(patient_id),
@@ -221,9 +249,7 @@ if selected == "คัดกรองใหม่":
                             "Stones": "Yes" if has_stones else "No",
                             "High_Sodium": "Yes" if high_sodium else "No",
                             "Chemicals": "Yes" if chemical_exposure else "No",
-                            "AI_Protein": protein_val,
-                            "AI_Blood": blood_val,
-                            "AI_Glucose": glucose_val,
+                            "AI_Results": all_ai_results,
                             "Total_Score": risk_score,
                             "Result": result_text,
                             "Image_File": image_filename
@@ -244,7 +270,7 @@ if selected == "คัดกรองใหม่":
                             "entry.1061500560": "เป็น" if has_gout else "ไม่เป็น",
                             "entry.2005371488": "มี" if family_ckd else "ไม่มี",
                             "entry.853069744": str(nsaids_usage),
-                            "entry.643930526": f"PRO:{protein_val}, BLD:{blood_val}, GLU:{glucose_val}",
+                            "entry.643930526": all_ai_results,
                             "entry.19531897": str(risk_score),
                             "entry.1594709429": str(result_text),
                             "entry.1993082703": "เป็น" if has_stones else "ไม่เป็น",
@@ -268,14 +294,19 @@ if selected == "คัดกรองใหม่":
 elif selected == "ประวัติ/ติดตามผล":
     st.header("🕒 ติดตามผลและวิเคราะห์แนวโน้มสุขภาพ")
     search_id = st.text_input("🔍 ค้นหาด้วยเบอร์โทรศัพท์", placeholder="เช่น 0812345678")
+    
     if search_id:
         if os.path.exists("ckd_database.csv"):
             df = pd.read_csv("ckd_database.csv")
+            # กรองข้อมูลและจัดการลำดับเวลา
             patient_data = df[df['Patient_ID'].astype(str) == search_id]
             patient_data = patient_data.sort_values(by='Date')
+            
             if not patient_data.empty:
                 latest = patient_data.iloc[-1]
                 prev_data = patient_data.iloc[-2] if len(patient_data) > 1 else None
+                
+                # --- จุดที่ 1: แสดงผลคะแนนและเปรียบเทียบ ---
                 col1, col2 = st.columns(2)
                 with col1:
                     if prev_data is not None:
@@ -284,51 +315,99 @@ elif selected == "ประวัติ/ติดตามผล":
                     else:
                         st.metric("คะแนนครั้งแรก", f"{latest['Total_Score']} แต้ม")
                 with col2:
-                    st.write(f"วันที่บันทึกล่าสุด: {latest['Date']}")
+                    st.write(f"📅 **บันทึกล่าสุด:** {latest['Date']}")
+                    st.write(f"🩺 **สถานะล่าสุด:** {latest['Result']}")
+
+                # กราฟแสดงแนวโน้มคะแนนความเสี่ยง
                 st.line_chart(patient_data.set_index('Date')['Total_Score'])
-                if st.button("🪄 ให้ AI วิเคราะห์ความเปลี่ยนแปลง"):
-                    history_text = patient_data[['Date','Total_Score','Result']].to_string(index=False)
-                    resp = model.generate_content(f"วิเคราะห์แนวโน้มสุขภาพจากข้อมูลนี้: {history_text}")
-                    st.info(resp.text)
+
+                # --- จุดที่ 2: แก้ไขการดึงข้อมูลให้ AI วิเคราะห์ (เพิ่ม AI_Results) ---
+                if st.button("🪄 ให้ AI วิเคราะห์ความเปลี่ยนแปลงเชิงลึก"):
+                    with st.spinner("🤖 AI กำลังอ่านข้อมูลประวัติ..."):
+                        # แก้ไขบรรทัดนี้: ให้ดึงคอลัมน์ AI_Results ที่มี 10 ค่าไปด้วย
+                        history_text = patient_data[['Date','Total_Score','Result','AI_Results']].to_string(index=False)
+                        
+                        prompt_history = f"""
+                        คุณคือแพทย์ผู้เชี่ยวชาญด้านโรคไต 
+                        วิเคราะห์แนวโน้มสุขภาพจากประวัติการตรวจปัสสาวะ 10 ค่า (AI_Results) และคะแนนความเสี่ยง (Total_Score) ดังนี้:
+                        {history_text}
+                        
+                        ช่วยสรุป:
+                        1. อาการดีขึ้นหรือแย่ลงอย่างไร?
+                        2. มีค่าไหนที่น่ากังวลเป็นพิเศษหรือไม่ (เช่น พบน้ำตาล, เลือดปน หรือค่าความเข้มข้นปัสสาวะผิดปกติ)?
+                        3. คำแนะนำในการปฏิบัติตัวที่เหมาะสมกับเกษตรกรรายนี้
+                        (ตอบเป็นภาษาไทยที่เข้าใจง่าย เป็นกันเอง)
+                        """
+                        
+                        resp = model.generate_content(prompt_history)
+                        st.info(resp.text)
+                
+                # แสดงตารางประวัติแบบอ่านง่าย
+                with st.expander("📄 ดูตารางประวัติการตรวจทั้งหมด"):
+                    st.dataframe(patient_data[['Date', 'Total_Score', 'Result', 'AI_Results']], use_container_width=True)
             else:
                 st.warning("❌ ไม่พบข้อมูลสำหรับเบอร์โทรศัพท์นี้")
         else:
-            st.info("ℹ️ ยังไม่มีข้อมูลบันทึก")
+            st.info("ℹ️ ยังไม่มีข้อมูลบันทึกในระบบ")
 
 elif selected == "สถิติภาพรวม":
-    st.subheader("📊 Dashboard: สถิติผู้เข้ารับการคัดกรอง")
+    st.subheader("📊 Dashboard: ภาพรวมสุขภาพไตเกษตรกร")
     file_name = "ckd_database.csv"
+    
     if os.path.exists(file_name):
         df = pd.read_csv(file_name)
         if not df.empty:
-            st.subheader("📋 ข้อมูลล่าสุด (5 รายการ)")
-            st.dataframe(df.tail(5), use_container_width=True)
+            # --- ส่วนที่ 1: สรุปตัวเลขสำคัญ (Key Metrics) ---
+            m1, m2, m3 = st.columns(3)
+            m1.metric("👥 จำนวนผู้ตรวจทั้งหมด", f"{len(df)} ราย")
+            
+            # นับคนเสี่ยงสูง (High Risk)
+            high_risk_count = len(df[df['Result'].str.contains("High Risk", na=False)])
+            m2.metric("🚨 กลุ่มเสี่ยงสูง (ส่งต่อ)", f"{high_risk_count} ราย", delta_color="inverse")
+            
+            # คำนวณอายุเฉลี่ย
+            avg_age = df['Age'].mean()
+            m3.metric("🎂 อายุเฉลี่ย", f"{avg_age:.1f} ปี")
+
             st.divider()
+
+            # --- ส่วนที่ 2: กราฟระดับความเสี่ยง (ใจความสำคัญที่สุด) ---
             c_chart1, c_chart2 = st.columns(2)
             with c_chart1:
                 st.subheader("📈 ระดับความเสี่ยงในพื้นที่")
-                if "Result" in df.columns:
-                    risk_counts = df["Result"].value_counts()
-                    st.bar_chart(risk_counts)
-                else:
-                    st.info("ยังไม่มีข้อมูล Result")
+                risk_counts = df["Result"].value_counts()
+                st.bar_chart(risk_counts)
+                st.caption("ช่วยให้จัดลำดับความสำคัญในการลงพื้นที่ครั้งต่อไป")
+
             with c_chart2:
-                st.subheader("⚠️ ปัจจัยเสี่ยงที่ตรวจพบ")
+                # วิเคราะห์ปัจจัยเสี่ยงจากพฤติกรรม (ดูแนวโน้ม)
+                st.subheader("⚠️ ปัจจัยเสี่ยงที่ตรวจพบ (จากประวัติ)")
                 risk_summary = {
                     "เบาหวาน": (df["DM"] == "Yes").sum() if "DM" in df.columns else 0,
                     "ความดัน": (df["HT"] == "Yes").sum() if "HT" in df.columns else 0,
                     "กินเค็ม": (df["High_Sodium"] == "Yes").sum() if "High_Sodium" in df.columns else 0,
-                    "นิ่ว": (df["Stones"] == "Yes").sum() if "Stones" in df.columns else 0,
-                    "สารเคมี": (df["Chemicals"] == "Yes").sum() if "Chemicals" in df.columns else 0
+                    "สัมผัสสารเคมี": (df["Chemicals"] == "Yes").sum() if "Chemicals" in df.columns else 0
                 }
                 st.bar_chart(pd.Series(risk_summary))
-            st.subheader("📍 จำนวนผู้เข้ารับการตรวจแยกตามอำเภอ")
-            if "District" in df.columns:
-                district_counts = df["District"].value_counts()
-                st.bar_chart(district_counts)
+
+            # --- ส่วนที่ 3: ข้อมูลเชิงลึกจาก 10 Parameters (ดูภาพรวมสุขภาพ) ---
+            st.divider()
+            st.subheader("🔍 ข้อมูลเชิงลึกจากผลปัสสาวะ (Urinalysis Insights)")
+            
+            # วิเคราะห์ภาวะขาดน้ำจากค่า SG ใน AI_Results (ถ้ามีคำว่า SG:1.025 หรือ SG:1.030)
+            dehydration_count = df['AI_Results'].str.contains("SG:1.025|SG:1.030", na=False).sum()
+            infection_count = df['AI_Results'].str.contains("NIT:Positive", na=False).sum()
+            
+            col_in1, col_in2 = st.columns(2)
+            with col_in1:
+                st.info(f"💧 **ภาวะขาดน้ำ:** พบเกษตรกร {dehydration_count} ราย ที่ดื่มน้ำไม่เพียงพอ (เสี่ยงนิ่ว/ไตวายเฉียบพลัน)")
+            with col_in2:
+                st.warning(f"🦠 **การติดเชื้อ:** พบแนวโน้มการติดเชื้อทางเดินปัสสาวะ {infection_count} ราย")
+
+            st.subheader("📋 ตารางข้อมูลล่าสุด")
+            st.dataframe(df.tail(10), use_container_width=True)
+
         else:
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
-
-

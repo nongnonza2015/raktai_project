@@ -297,10 +297,10 @@ if selected == "คัดกรองใหม่":
             glucose_val = str(ai_data.get("Glucose", "Negative"))
             if any(x in glucose_val for x in ["Trace", "+1", "+2", "+3", "+4"]): risk_score += 1
             
-            sg_val = str(ai_data.get("SG", "1.010"))
-            if "1.025" in sg_val or "1.030" in sg_val: 
-                risk_score += 1 
-
+            sg_val = ai_data.get("SG", "1.010")
+            try: risk_score += 1 if float(sg_val) >= 1.025 else 0
+            except (ValueError, TypeError): pass
+                
             leu_val = str(ai_data.get("Leukocytes", "Negative"))
             nit_val = str(ai_data.get("Nitrite", "Negative"))
             if "Positive" in nit_val or any(x in leu_val for x in ["Trace", "+1", "+2", "+3"]): 
@@ -539,4 +539,5 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 

@@ -10,6 +10,25 @@ import re
 from streamlit_option_menu import option_menu
 
 def send_line_message(message_text):
+    try:
+        
+        LINE_TOKEN = st.secrets.get("LINE_NOTIFY_TOKEN", "") 
+        if not LINE_TOKEN:
+            st.error("🚨 ไม่พบ LINE_NOTIFY_TOKEN ในการตั้งค่า Secrets!")
+            return 400
+            
+        url = "https://notify-api.line.me/api/notify"
+        headers = {'Authorization': f'Bearer {LINE_TOKEN}'}
+        data = {'message': message_text}
+        
+        # ยิง API ไปที่ LINE Notify
+        response = requests.post(url, headers=headers, data=data)
+        return response.status_code
+        
+    except Exception as e:
+        st.error(f"❌ เกิดข้อผิดพลาดในการส่ง LINE: {e}")
+        return 500
+        
     LINE_ACCESS_TOKEN = "05914a54947367b96571441c28c01b4d"
     
     TARGET_ID = "2009263218"
@@ -63,19 +82,23 @@ if os.path.exists("ckd_database.csv"):
     try:
         df_notify = pd.read_csv("ckd_database.csv")
         if "Next_Appointment" in df_notify.columns:
-            # แปลงข้อมูลวันที่ และคัดกรองเฉพาะที่มีวันนัด
-            df_notify['Next_Appointment'] = pd.to_datetime(df_notify['Next_Appointment'])
+            # 1. เพิ่ม errors="coerce" เพื่อบอกว่าถ้าเจอค่าว่างหรือวันที่แปลกๆ ให้เปลี่ยนเป็นค่า NaT แทนการ Error
+            df_notify['Next_Appointment'] = pd.to_datetime(df_notify['Next_Appointment'], errors="coerce")
+            
+            # 2. คัดเอาเฉพาะคนที่มีวันนัดจริงๆ (ตัดค่า NaT ทิ้งไป)
+            df_valid_dates = df_notify.dropna(subset=['Next_Appointment'])
+            
             today = datetime.now().date()
             
             # แจ้งเตือนล่วงหน้า 3 วัน
             upcoming_days = 3
             alert_date = today + pd.Timedelta(days=upcoming_days)
             
-            # กรองหารายชื่อที่ถึงกำหนด (ตั้งแต่วันนี้ ถึง อีก 3 วันข้างหน้า)
-            mask = (df_notify['Next_Appointment'].dt.date >= today) & \
-                   (df_notify['Next_Appointment'].dt.date <= alert_date)
-            upcoming_list = df_notify[mask]
-
+            # 3. เปลี่ยนมาใช้ตัวแปร df_valid_dates ในการคำนวณแทน df_notify
+            mask = (df_valid_dates['Next_Appointment'].dt.date >= today) & \
+                   (df_valid_dates['Next_Appointment'].dt.date <= alert_date)
+            upcoming_list = df_valid_dates[mask]
+            
             if not upcoming_list.empty:
                 st.info(f"🔔 **ระบบแจ้งเตือน:** พบเกษตรกรที่มีนัดตรวจในอีก {upcoming_days} วันข้างหน้า")
                 with st.expander("ดูรายชื่อผู้รับการตรวจที่มีนัดหมาย"):
@@ -518,6 +541,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

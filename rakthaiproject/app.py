@@ -47,27 +47,6 @@ def send_line_message(message_text):
     except Exception as e:
         st.error(f"❌ เกิดข้อผิดพลาดในการส่ง LINE OA: {e}")
         return 500
-    
-    url = "https://api.line.me/v2/bot/message/push"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
-    }
-    payload = {
-        "to": LINE_USER_ID,
-        "messages": [
-            {
-                "type": "text",
-                "text": message_text
-            }
-        ]
-    }
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        return response.status_code
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
         
 st.set_page_config(page_title="CKD Early Detection (Isan & AI)", layout="wide")
 
@@ -558,6 +537,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

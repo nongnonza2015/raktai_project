@@ -144,24 +144,27 @@ if selected == "คัดกรองใหม่":
                             st.error("❌ AI ไม่สามารถสร้างข้อมูลรูปแบบ JSON ได้")
                     except Exception as e:
                         st.error(f"❌ เกิดข้อผิดพลาด: {e}")
+                        
             if st.session_state.ai_data:
                 ai_data = st.session_state.ai_data
                 st.success("✨ AI วิเคราะห์ภาพสำเร็จแล้ว!")
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("🦠 LEU (เม็ดเลือดขาว)", ai_data.get("Leukocytes", "N/A"))
-        col2.metric("🧪 NIT (ติดเชื้อ)", ai_data.get("Nitrite", "N/A"))
-        col3.metric("🟡 URO (ตับ/ดีซ่าน)", ai_data.get("Urobilinogen", "N/A"))
-        col4.metric("🥩 PRO (โปรตีน)", ai_data.get("Protein", "N/A"))
-        col5.metric("⚖️ pH (กรด-ด่าง)", ai_data.get("pH", "N/A"))
+                
+                # แสดงผลแบบ Grid 10 ค่า
+                c1, c2, c3, c4, c5 = st.columns(5)
+                c1.metric("🦠 LEU", ai_data.get("Leukocytes", "N/A"))
+                c2.metric("🧪 NIT", ai_data.get("Nitrite", "N/A"))
+                c3.metric("🟡 URO", ai_data.get("Urobilinogen", "N/A"))
+                c4.metric("🥩 PRO", ai_data.get("Protein", "N/A"))
+                c5.metric("⚖️ pH", ai_data.get("pH", "N/A"))
 
-        col6, col7, col8, col9, col10 = st.columns(5)
-        col6.metric("🩸 BLD (เลือด)", ai_data.get("Blood", "N/A"))
-        col7.metric("💧 SG (ความเข้มข้น)", ai_data.get("SG", "N/A"))
-        col8.metric("🔥 KET (คีโตน)", ai_data.get("Ketones", "N/A"))
-        col9.metric("🟤 BIL (บิลิรูบิน)", ai_data.get("Bilirubin", "N/A"))
-        col10.metric("🍬 GLU (น้ำตาล)", ai_data.get("Glucose", "N/A"))
-
-        st.caption(f"**ความมั่นใจของ AI:** {ai_data.get('Confidence', 'N/A')}% | **บันทึก AI:** {ai_data.get('Note', '')}")
+                c6, c7, c8, c9, c10 = st.columns(5)
+                c6.metric("🩸 BLD", ai_data.get("Blood", "N/A"))
+                c7.metric("💧 SG", ai_data.get("SG", "N/A"))
+                c8.metric("🔥 KET", ai_data.get("Ketones", "N/A"))
+                c9.metric("🟤 BIL", ai_data.get("Bilirubin", "N/A"))
+                c10.metric("🍬 GLU", ai_data.get("Glucose", "N/A"))
+                
+                st.caption(f"**ความแม่นยำ:** {ai_data.get('Confidence')}% | **บันทึก:** {ai_data.get('Note')}")
 
         # 🚨 5. คำนวณความเสี่ยง (Advanced Risk Scoring)
         if st.session_state.ai_data:
@@ -424,6 +427,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

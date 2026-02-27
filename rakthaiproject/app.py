@@ -47,18 +47,14 @@ def send_line_message(message_text):
     except Exception as e:
         st.error(f"❌ เกิดข้อผิดพลาดในการส่ง LINE OA: {e}")
         return 500
-        
-    LINE_ACCESS_TOKEN = "05914a54947367b96571441c28c01b4d"
-    
-    TARGET_ID = "2009263218"
     
     url = "https://api.line.me/v2/bot/message/push"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LINE_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
     }
     payload = {
-        "to": TARGET_ID,
+        "to": LINE_USER_ID,
         "messages": [
             {
                 "type": "text",
@@ -562,6 +558,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

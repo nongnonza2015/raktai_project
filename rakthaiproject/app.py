@@ -69,7 +69,7 @@ except KeyError:
     st.error("🚨 ไม่พบ API Key! กรุณาตรวจสอบไฟล์ .streamlit/secrets.toml (สำหรับรันในเครื่อง) หรือตั้งค่า Secrets ใน Streamlit Cloud")
     st.stop()
     
-model = genai.GenerativeModel("gemini-3.1-flash")
+model = genai.GenerativeModel("gemini-1.5-flash")
 # ===== 💾 โหลดฐานข้อมูลหลักเพียงครั้งเดียว (Global Data Load) =====
 DB_FILE = "ckd_database.csv"
 if os.path.exists(DB_FILE):
@@ -539,3 +539,4 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+

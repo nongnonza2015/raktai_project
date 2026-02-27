@@ -496,7 +496,9 @@ elif selected == "ประวัติ/ติดตามผล":
                         (ตอบเป็นภาษาไทยที่เข้าใจง่าย เป็นกันเอง)
                         """
                         resp = model.generate_content(prompt_history)
-                        st.info(resp.text)
+                        with st.container(border=True):
+                            st.markdown("### 👨‍⚕️ สรุปและคำแนะนำจาก AI")
+                            st.markdown(resp.text)
                 
                 with st.expander("📄 ดูตารางประวัติการตรวจทั้งหมด"):
                     st.dataframe(patient_data[['Date', 'Total_Score', 'Result', 'AI_Results']], use_container_width=True)
@@ -560,6 +562,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

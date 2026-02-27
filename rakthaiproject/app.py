@@ -35,23 +35,6 @@ def send_line_message(message_text):
         print(f"Error: {e}")
         return None
         
-        if os.path.exists("ckd_database.csv"):
-    df_check = pd.read_csv("ckd_database.csv")
-    if "Next_Appointment" in df_check.columns:
-        df_check['Next_Appointment'] = pd.to_datetime(df_check['Next_Appointment'])
-        
-        # ค้นหาคนที่มีนัด "พรุ่งนี้"
-        tomorrow = datetime.now().date() + pd.Timedelta(days=1)
-        upcoming_patients = df_check[df_check['Next_Appointment'].dt.date == tomorrow]
-        
-        if not upcoming_patients.empty:
-            st.warning(f"🔔 พรุ่งนี้มีนัดตรวจ {len(upcoming_patients)} ราย")
-            if st.button("📲 ส่งข้อความแจ้งเตือนเข้า LINE เจ้าหน้าที่"):
-                for _, row in upcoming_patients.iterrows():
-                    msg = f"⏰ แจ้งเตือนนัดหมายพรุ่งนี้\n👤 คุณ: {row['Name']}\n📍 พื้นที่: {row['District']}\n📞 โทร: {row['Patient_ID']}"
-                    status = send_line_message(msg)
-                    if status == 200:
-                        st.success(f"ส่งเตือนคุณ {row['Name']} เรียบร้อย!")
 st.set_page_config(page_title="CKD Early Detection (Isan & AI)", layout="wide")
 
 # ===== Sidebar and Menu =====
@@ -74,6 +57,7 @@ except KeyError:
     st.stop()
     
 model = genai.GenerativeModel("gemini-1.5-flash")
+
 # ===== ส่วนระบบแจ้งเตือนนัดหมายล่วงหน้า (Notification Center) =====
 if os.path.exists("ckd_database.csv"):
     try:
@@ -101,6 +85,23 @@ if os.path.exists("ckd_database.csv"):
     except:
         pass 
         
+        if os.path.exists("ckd_database.csv"):
+    df_check = pd.read_csv("ckd_database.csv")
+    if "Next_Appointment" in df_check.columns:
+        df_check['Next_Appointment'] = pd.to_datetime(df_check['Next_Appointment'])
+        
+        # ค้นหาคนที่มีนัด "พรุ่งนี้"
+        tomorrow = datetime.now().date() + pd.Timedelta(days=1)
+        upcoming_patients = df_check[df_check['Next_Appointment'].dt.date == tomorrow]
+        
+        if not upcoming_patients.empty:
+            st.warning(f"🔔 พรุ่งนี้มีนัดตรวจ {len(upcoming_patients)} ราย")
+            if st.button("📲 ส่งข้อความแจ้งเตือนเข้า LINE เจ้าหน้าที่"):
+                for _, row in upcoming_patients.iterrows():
+                    msg = f"⏰ แจ้งเตือนนัดหมายพรุ่งนี้\n👤 คุณ: {row['Name']}\n📍 พื้นที่: {row['District']}\n📞 โทร: {row['Patient_ID']}"
+                    status = send_line_message(msg)
+                    if status == 200:
+                        st.success(f"ส่งเตือนคุณ {row['Name']} เรียบร้อย!")
 # ===== Main Content Based on Menu Selection =====
 if selected == "คัดกรองใหม่":
     st.title("🌾 ระบบคัดกรองโรคไตเชิงรุกด้วย AI สำหรับเกษตรกรในจังหวัดสกลนคร")
@@ -505,5 +506,6 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 

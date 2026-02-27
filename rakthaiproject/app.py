@@ -39,7 +39,7 @@ st.set_page_config(page_title="CKD Early Detection (Isan & AI)", layout="wide")
 
 # ===== Sidebar and Menu =====
 with st.sidebar:
-    st.title("🩺 RAITAI AI")
+    st.title("🩺 RAKTAI AI")
     selected = option_menu(
         menu_title="เมนูหลัก",
         options=["คัดกรองใหม่", "ประวัติ/ติดตามผล", "สถิติภาพรวม"],
@@ -518,6 +518,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

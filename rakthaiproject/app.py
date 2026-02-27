@@ -164,7 +164,7 @@ if selected == "คัดกรองใหม่":
     with st.expander("📋 1. ข้อมูลทั่วไปของผู้รับการตรวจ", expanded=True):
         col1, col2, col3 = st.columns(3)
         with col1:
-            patient_id = st.text_input("📱 เบอร์โทรศัพท์ (สำคัญเพื่อใช้ติดตามผล)")
+            patient_id = st.text_input("เบอร์โทรศัพท์", max_chars=10)
             name = st.text_input("ชื่อ-นามสกุล (ถ้าต้องการเก็บ)")
             age = st.number_input("อายุ (ปี)", min_value=1, max_value=120, value=45)
         with col2:
@@ -363,6 +363,9 @@ if selected == "คัดกรองใหม่":
                 st.session_state.is_submitted = False
                 
             if st.button("📥 ยืนยันผลและบันทึกข้อมูล", type="primary", use_container_width=True, disabled=st.session_state.is_submitted):
+                if len(patient_id) != 10 or not patient_id.isdigit():
+        st.warning("⚠️ กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก และเป็นตัวเลขเท่านั้นครับ")
+        st.stop()
                 with st.spinner("กำลังบันทึกข้อมูลและเก็บภาพเข้าเซิร์ฟเวอร์..."):
                     try:
                         if not os.path.exists("captured_images"):
@@ -546,6 +549,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

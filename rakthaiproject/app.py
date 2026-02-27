@@ -74,10 +74,15 @@ model = genai.GenerativeModel("gemini-3-flash-preview")
 # ===== 💾 โหลดฐานข้อมูลหลักเพียงครั้งเดียว (Global Data Load) =====
 DB_FILE = "ckd_database.csv"
 if os.path.exists(DB_FILE):
-    df_main = pd.read_csv(DB_FILE)
+    # 1. เพิ่ม dtype เพื่อบังคับให้ Patient_ID เป็นข้อความ (str) เสมอ
+    df_main = pd.read_csv(DB_FILE, dtype={"Patient_ID": str})
+    
+    # 2. (แถม) โค้ดซ่อมข้อมูลเก่า: ถ้าเบอร์ไหนในระบบ 0 หายไป ให้เติม 0 กลับเข้าไปข้างหน้า
+    df_main['Patient_ID'] = df_main['Patient_ID'].apply(
+        lambda x: '0' + str(x) if pd.notnull(x) and str(x) != 'nan' and not str(x).startswith('0') else str(x)
+    )
 else:
     df_main = pd.DataFrame() # ถ้ายังไม่มีไฟล์ ให้สร้างตารางว่างๆ เตรียมไว้
-
 # ===== ส่วนระบบแจ้งเตือนนัดหมายล่วงหน้า (Notification Center) =====
 if not df_main.empty:
     try:
@@ -540,6 +545,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

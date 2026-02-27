@@ -95,51 +95,55 @@ if selected == "คัดกรองใหม่":
         st.markdown("---")
         st.header("🧠 4. ผลการวิเคราะห์สีแผ่นปัสสาวะโดย AI")
         col_img, col_ai = st.columns([1, 2])
+        
         with col_img:
             image = Image.open(img_file)
             st.image(image, caption="ภาพที่รับเข้าสู่ระบบ AI", use_container_width=True)
+            
         with col_ai:
             if st.session_state.ai_data is None:
                 with st.spinner("🤖 AI กำลังประมวลผล..."):
                     try:
+                        # 1. Prompt ที่เข้มงวดเพื่อป้องกัน AI ตอบมั่ว
                         prompt = """
-คุณคือผู้เชี่ยวชาญด้านเทคนิคการแพทย์ ตรวจสอบภาพแผ่นทดสอบปัสสาวะ (Dipstick) แบบ 10 ค่า
-ให้อ่านค่าเรียงตามลำดับมาตรฐาน ดังนี้: Leukocytes, Nitrite, Urobilinogen, Protein, pH, Blood, Specific Gravity (SG), Ketones, Bilirubin, Glucose
-ส่งคำตอบเป็น JSON รูปแบบนี้เท่านั้น:
-{
-    "Leukocytes": "Negative หรือ +1 ถึง +3",
-    "Nitrite": "Negative หรือ Positive",
-    "Urobilinogen": "Normal หรือ ระบุค่า",
-    "Protein": "Negative หรือ Trace หรือ +1 ถึง +4",
-    "pH": "5.0 ถึง 8.5",
-    "Blood": "Negative หรือ Trace หรือ +1 ถึง +4",
-    "SG": "1.000 ถึง 1.030",
-    "Ketones": "Negative หรือ Trace หรือ +1 ถึง +4",
-    "Bilirubin": "Negative หรือ +1 ถึง +3",
-    "Glucose": "Negative หรือ Trace หรือ +1 ถึง +4",
-    "Confidence": "ความมั่นใจ 1-100",
-    "Note": "ข้อสังเกตสั้นๆ"
-}
-"""
-try:
-    response = model.generate_content([prompt, image])
-    if not response or not response.text:
-        st.error("❌ AI ไม่ตอบกลับ")
-        st.stop()
-    json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
-    if not json_match:
-        st.error("❌ AI ตอบกลับไม่อยู่ในรูปแบบ JSON")
-        st.stop()
-    st.session_state.ai_data = json.loads(json_match.group(0))
-    st.rerun()
+                        คุณคือผู้เชี่ยวชาญด้านเทคนิคการแพทย์ วิเคราะห์ภาพแผ่นตรวจปัสสาวะ 10 ค่า
+                        หากภาพไม่ใช่แผ่นตรวจ ให้ตอบ JSON: {"error": "invalid"}
+                        หากใช่ ให้税อ่านค่าเรียงตามลำดับ: Leukocytes, Nitrite, Urobilinogen, Protein, pH, Blood, SG, Ketones, Bilirubin, Glucose
+                        ตอบเป็น JSON เท่านั้น:
+                        {
+                            "Leukocytes": "Negative หรือ +1 ถึง +3",
+                            "Nitrite": "Negative หรือ Positive",
+                            "Urobilinogen": "Normal หรือ ระบุค่า",
+                            "Protein": "Negative หรือ Trace หรือ +1 ถึง +4",
+                            "pH": "5.0-8.5",
+                            "Blood": "Negative หรือ Trace หรือ +1 ถึง +4",
+                            "SG": "1.000-1.030",
+                            "Ketones": "Negative หรือ Trace หรือ +1 ถึง +4",
+                            "Bilirubin": "Negative หรือ +1 ถึง +3",
+                            "Glucose": "Negative หรือ Trace หรือ +1 ถึง +4",
+                            "Confidence": 0-100,
+                            "Note": "สรุปสั้นๆ"
+                        }
+                        """
+                        # 2. ส่งภาพแบบระบุชนิดข้อมูล (ช่วยให้ประมวลผลแม่นยำขึ้น)
+                        response = model.generate_content([
+                            prompt,
+                            {"mime_type": "image/jpeg", "data": img_file.getvalue()}
+                        ])
 
-    except json.JSONDecodeError:
-        st.error("❌ JSON ไม่ถูกต้อง")
-        st.stop()
-    
-    except Exception as e:
-        st.error(f"❌ เกิดข้อผิดพลาด: {e}")
-        st.stop()
+                        # 3. ตรวจสอบและสกัด JSON
+                        json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                        if json_match:
+                            result = json.loads(json_match.group(0))
+                            if "error" in result:
+                                st.error("❌ ภาพถ่ายไม่ชัดเจนหรือไม่ใช่แผ่นตรวจปัสสาวะ")
+                            else:
+                                st.session_state.ai_data = result
+                                st.rerun()
+                        else:
+                            st.error("❌ AI ไม่สามารถสร้างข้อมูลรูปแบบ JSON ได้")
+                    except Exception as e:
+                        st.error(f"❌ เกิดข้อผิดพลาด: {e}")
             if st.session_state.ai_data:
                 ai_data = st.session_state.ai_data
                 st.success("✨ AI วิเคราะห์ภาพสำเร็จแล้ว!")

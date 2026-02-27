@@ -124,13 +124,29 @@ if selected == "คัดกรองใหม่":
     "Note": "ข้อสังเกตสั้นๆ"
 }
 """
-                        response = model.generate_content([prompt, image])
-                        json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
-                        st.session_state.ai_data = json.loads(json_match.group(0))
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ AI ไม่สามารถอ่านค่าได้ กรุณาถ่ายภาพใหม่อีกครั้ง: {e}")
-                        st.stop()
+                        try:
+    response = model.generate_content([prompt, image])
+
+    if not response or not response.text:
+        st.error("❌ AI ไม่ตอบกลับ")
+        st.stop()
+
+    json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+    if not json_match:
+        st.error("❌ AI ตอบกลับไม่อยู่ในรูปแบบ JSON")
+        st.stop()
+
+    st.session_state.ai_data = json.loads(json_match.group(0))
+
+    st.rerun()
+
+except json.JSONDecodeError:
+    st.error("❌ JSON ไม่ถูกต้อง")
+    st.stop()
+
+except Exception as e:
+    st.error(f"❌ เกิดข้อผิดพลาด: {e}")
+    st.stop()
             if st.session_state.ai_data:
                 ai_data = st.session_state.ai_data
                 st.success("✨ AI วิเคราะห์ภาพสำเร็จแล้ว!")
@@ -411,4 +427,5 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 

@@ -56,7 +56,7 @@ except KeyError:
     st.error("🚨 ไม่พบ API Key! กรุณาตรวจสอบไฟล์ .streamlit/secrets.toml (สำหรับรันในเครื่อง) หรือตั้งค่า Secrets ใน Streamlit Cloud")
     st.stop()
     
-model = genai.GenerativeModel("gemini-1.5-flash-latest")
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 # ===== ส่วนระบบแจ้งเตือนนัดหมายล่วงหน้า (Notification Center) =====
 if os.path.exists("ckd_database.csv"):

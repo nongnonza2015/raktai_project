@@ -50,7 +50,7 @@ with st.sidebar:
     st.warning("⚠️ **Disclaimer:** ระบบคัดกรองเบื้องต้นเท่านั้น ไม่ใช่การวินิจฉัยโดยแพทย์")
     
 try:
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    GEMINI_API_KEY = "AIzaSyDvsHoM1Kvg4O8IP7uXZxfXO34DFTnRIi8"
     genai.configure(api_key=GEMINI_API_KEY)
 except KeyError:
     st.error("🚨 ไม่พบ API Key! กรุณาตรวจสอบไฟล์ .streamlit/secrets.toml (สำหรับรันในเครื่อง) หรือตั้งค่า Secrets ใน Streamlit Cloud")
@@ -518,6 +518,7 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+
 
 
 

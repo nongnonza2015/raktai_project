@@ -32,7 +32,7 @@ try:
 except KeyError:
     st.error("🚨 ไม่พบ API Key! กรุณาตรวจสอบไฟล์ .streamlit/secrets.toml (สำหรับรันในเครื่อง) หรือตั้งค่า Secrets ใน Streamlit Cloud")
     st.stop()
-model = genai.GenerativeModel("models/gemini-1.5-pro")
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 # ===== Main Content Based on Menu Selection =====
 if selected == "คัดกรองใหม่":
@@ -411,3 +411,4 @@ elif selected == "สถิติภาพรวม":
             st.warning("⚠️ พบไฟล์ฐานข้อมูลแต่ยังไม่มีรายการบันทึก")
     else:
         st.info("ℹ️ ยังไม่มีข้อมูลในระบบ")
+

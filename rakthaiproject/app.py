@@ -82,18 +82,23 @@ if os.path.exists("ckd_database.csv"):
                     for _, row in upcoming_list.iterrows():
                         appt_date = row['Next_Appointment'].strftime('%d/%m/%Y')
                         st.warning(f"👤 **{row['Name']}** | 📞 {row['Patient_ID']} | 🗓️ นัดวันที่: **{appt_date}**")
-   except Exception as e:
-    st.error(f"อ่านข้อมูลแจ้งเตือนไม่ได้: {e}")
+                        
+    except Exception as e:
+        st.error(f"อ่านข้อมูลแจ้งเตือนไม่ได้: {e}")
 
-# ===== แจ้งเตือนนัดพรุ่งนี้ =====
+# ===== แจ้งเตือนนัด 'พรุ่งนี้' + ส่ง LINE =====
 if os.path.exists("ckd_database.csv"):
     df_check = pd.read_csv("ckd_database.csv")
 
     if "Next_Appointment" in df_check.columns:
-        df_check['Next_Appointment'] = pd.to_datetime(df_check['Next_Appointment'], errors="coerce")
-        tomorrow = datetime.now().date() + pd.Timedelta(days=1)
+        df_check['Next_Appointment'] = pd.to_datetime(
+            df_check['Next_Appointment'], errors="coerce"
+        )
 
-        upcoming_patients = df_check[df_check['Next_Appointment'].dt.date == tomorrow]
+        tomorrow = datetime.now().date() + pd.Timedelta(days=1)
+        upcoming_patients = df_check[
+            df_check['Next_Appointment'].dt.date == tomorrow
+        ]
 
         if not upcoming_patients.empty:
             st.warning(f"🔔 พรุ่งนี้มีนัดตรวจ {len(upcoming_patients)} ราย")
